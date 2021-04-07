@@ -57,26 +57,6 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
         this.gattHandler = gattHandler;
     }
 
-    private void connect(BluetoothDevice device) {
-//        isRW = false;
-//        isConnected = false;
-        connectionTimeoutHandler.postDelayed(() -> {
-//            if (!isConnected) {
-            Log.d(TAG, "connection timed out");
-            onFailed(currGatt, TIMED_OUT);
-//            }
-        }, CONNECTION_TIME_OUT);
-        rwTimeoutHandler.postDelayed(() -> {
-//            if (!isRW && isConnected) {
-            Log.d(TAG, "rw timed out");
-            onFailed(currGatt, TIMED_OUT);
-//            }
-        }, RW_TIME_OUT);
-        Log.d(TAG, "request to connect with device: " + device.getAddress());
-        currGatt = device.connectGatt(mContext, false, getCallback(), BluetoothDevice.TRANSPORT_LE);
-        currGatt.connect();
-    }
-
     private BluetoothGattCallback getCallback() {
         return new BluetoothGattCallback() {
             @Override
@@ -174,6 +154,26 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
         };
     }
 
+    private void connect(BluetoothDevice device) {
+//        isRW = false;
+//        isConnected = false;
+        connectionTimeoutHandler.postDelayed(() -> {
+//            if (!isConnected) {
+            Log.d(TAG, "connection timed out");
+            onFailed(currGatt, TIMED_OUT);
+//            }
+        }, CONNECTION_TIME_OUT);
+        rwTimeoutHandler.postDelayed(() -> {
+//            if (!isRW && isConnected) {
+            Log.d(TAG, "rw timed out");
+            onFailed(currGatt, TIMED_OUT);
+//            }
+        }, RW_TIME_OUT);
+        Log.d(TAG, "request to connect with device: " + device.getAddress());
+        currGatt = device.connectGatt(mContext, false, getCallback(), BluetoothDevice.TRANSPORT_LE);
+        currGatt.connect();
+    }
+
     public void getUserData(BluetoothDevice device) {
         if (!isWriting && !isReading) {
             isReading = true;
@@ -235,8 +235,10 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
     }
 
     public void terminate() {
-        if (currGatt != null)
-            currGatt.close();
+        if (currGatt == null)
+            return;
+        currGatt.close();
+        currGatt = null;
     }
 
 //    private void sendPacket(String msg) {

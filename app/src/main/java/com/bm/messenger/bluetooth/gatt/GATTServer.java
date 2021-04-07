@@ -12,8 +12,8 @@ import android.content.Context;
 
 public class GATTServer extends BluetoothGattServerCallback {
 
-    private final BluetoothGattServer server;
     private final GattHandler callbackHandler;
+    private BluetoothGattServer server;
 
     public GATTServer(Context mContext, BluetoothManager bluetoothManager, GattHandler callbackHandler) {
         server = bluetoothManager.openGattServer(mContext, this);
@@ -29,8 +29,10 @@ public class GATTServer extends BluetoothGattServerCallback {
 //    }
 
     public void terminate() {
-        if (server != null)
-            server.close();
+        if (server == null)
+            return;
+        server.close();
+        server = null;
     }
 
     @Override

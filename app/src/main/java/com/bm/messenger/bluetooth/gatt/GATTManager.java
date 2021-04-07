@@ -87,7 +87,6 @@ public class GATTManager implements GattHandler {
         this.bluetoothManager = bluetoothManager;
         db = new Database();
         getCurrentUser();
-        init();
 //        characteristicUser.addDescriptor(descriptorUserId);
 //        characteristicUser.addDescriptor(descriptorUserName);
 //        characteristicMessage.addDescriptor(descriptorMessageId);
@@ -111,7 +110,7 @@ public class GATTManager implements GattHandler {
                 }));
     }
 
-    private void init() {
+    public void init() {
         initClient();
         initServer();
     }
@@ -150,6 +149,8 @@ public class GATTManager implements GattHandler {
         disposables.dispose();
         client.terminate();
         server.terminate();
+        client = null;
+        server = null;
     }
 
     public void sendMessage(String message) {

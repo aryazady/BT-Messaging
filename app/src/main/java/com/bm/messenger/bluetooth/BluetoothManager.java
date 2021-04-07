@@ -86,9 +86,11 @@ public class BluetoothManager extends ScanCallback {
                 switch (state) {
                     case BluetoothAdapter.STATE_ON:
                         startAdvertising();
+                        gattManager.init();
                         break;
                     case BluetoothAdapter.STATE_TURNING_OFF:
                         stopAdvertising();
+                        gattManager.terminate();
                         break;
                 }
             }
@@ -101,6 +103,8 @@ public class BluetoothManager extends ScanCallback {
         bluetoothAdapter = bluetoothManager.getAdapter();
 //        socketHandler = new SocketHandler(mContext, bluetoothAdapter);
         gattManager = new GATTManager(mContext, bluetoothManager);
+        if (bluetoothAdapter.isEnabled())
+            gattManager.init();
     }
 
     public BroadcastReceiver getBluetoothReceiver() {
