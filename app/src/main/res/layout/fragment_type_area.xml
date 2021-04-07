@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/border_top"
+    android:minHeight="50dp"
+    android:orientation="horizontal">
+
+    <EditText
+        android:id="@+id/et_type_area"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:layout_weight="0.8"
+        android:autofillHints="@string/message"
+        android:background="@android:color/transparent"
+        android:gravity="center_vertical"
+        android:hint="@string/message"
+        android:inputType="text"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:text="aoiwhdoiahhhoiodhhhhhh\nhhhhhhhhhhhhhhh\nhoihiohoiiohohaiohwoidhiooiiahowihdihasiod\nhoiahwdhad" />
+
+    <ImageButton
+        android:id="@+id/ib_send_message"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.2"
+        android:background="?attr/selectableItemBackground"
+        app:srcCompat="@drawable/ic_send" />
+
+</LinearLayout>
