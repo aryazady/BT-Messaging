@@ -108,8 +108,8 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
     protected void onDestroy() {
         super.onDestroy();
         db.closeDatabase();
-        bluetoothManager.terminate();
         binding = null;
+        bluetoothManager.dispose();
 //        unregisterReceiver(bluetoothManager);
     }
 
@@ -128,10 +128,13 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
                 liveDataModel.getCurrPage() == LiveDataModel.CAUTION)
             super.onBackPressed();
         for (Fragment fragment : fragmentList)
-            if (fragment instanceof BroadcastPageFragment)
+            if (fragment instanceof BroadcastPageFragment) {
                 ((BroadcastPageFragment) fragment).onBackPressed();
-            else if (fragment instanceof ConversationFragment)
+                return;
+            } else if (fragment instanceof ConversationFragment) {
                 ((ConversationFragment) fragment).onBackPressed();
+                return;
+            }
     }
 
     private void init() {
@@ -226,7 +229,7 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
             public void run() {
                 Log.d(TAG, "request to scan");
                 bluetoothManager.startScanning();
-                blScanHandler.postDelayed(this, 20000);
+                blScanHandler.postDelayed(this, 15000);
             }
         };
         runnable.run();
@@ -305,7 +308,7 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
             case LiveDataModel.BROADCAST:
             case LiveDataModel.HISTORY:
 //                bluetoothManager.startAdvertising();
-                getSupportFragmentManager().popBackStack();
+//                getSupportFragmentManager().popBackStack();
                 selectPage();
 //                changeBottomBar();
                 break;

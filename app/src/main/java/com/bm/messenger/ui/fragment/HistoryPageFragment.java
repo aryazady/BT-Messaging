@@ -13,6 +13,7 @@ import androidx.core.os.HandlerCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.bm.messenger.R;
 import com.bm.messenger.adapter.AdapterOnClickListener;
@@ -38,27 +39,24 @@ public class HistoryPageFragment extends Fragment implements AdapterOnClickListe
     public static final int HISTORY = 101;
     public static final int NEARBY = 202;
     private final LocalDatabase db;
-    private final List<ChatModel> historyChat;
-    private final BluetoothManager bluetoothManager;
-    private final List<UserModel> nearbyPeople;
+    private final List<ChatModel> historyChat = new ArrayList<>();
+    private final List<UserModel> nearbyPeople = new ArrayList<>();
+    private final Handler refreshNearbyHandler = HandlerCompat.createAsync(Looper.myLooper());
     private HistoryPageAdapter historyAdapter;
     private NearbyAdapter nearbyAdapter;
     private LinearLayoutManager historyLayoutManager, nearbyLayoutManager;
     private FragmentHistoryChatBinding binding;
     private Disposable disposable;
     private SharedViewModel sharedViewModel;
-    private int currChats, prevChats = 0;
-    private boolean isDestroy = false;
+    //    private boolean isDestroy = false;
     private boolean hasChange = false;
 
 
     public HistoryPageFragment(LocalDatabase db, BluetoothManager bluetoothManager) {
         super(R.layout.fragment_history_chat);
         this.db = db;
-        this.bluetoothManager = bluetoothManager;
-        this.bluetoothManager.setNearbyFindListener(this);
-        historyChat = new ArrayList<>();
-        nearbyPeople = new ArrayList<>();
+        bluetoothManager.setNearbyFindListener(this);
+        nearbyPeople.addAll(bluetoothManager.getNearby());
 //        conversations = new ArrayList<>();
 //        users = new ArrayList<>();
     }
@@ -71,6 +69,7 @@ public class HistoryPageFragment extends Fragment implements AdapterOnClickListe
 //        sharedViewModel.getData().observe(getViewLifecycleOwner(), this::handleLiveData);
         historyLayoutManager = new LinearLayoutManager(getActivity());
         nearbyLayoutManager = new LinearLayoutManager(getActivity());
+        nearbyLayoutManager.setOrientation(RecyclerView.HORIZONTAL);
         historyAdapter = new HistoryPageAdapter(historyChat, this);
         nearbyAdapter = new NearbyAdapter(nearbyPeople, this);
         binding.rvChatHistory.setLayoutManager(historyLayoutManager);
@@ -84,26 +83,23 @@ public class HistoryPageFragment extends Fragment implements AdapterOnClickListe
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         getHistory();
-        final Handler handler = HandlerCompat.createAsync(Looper.myLooper());
         new Runnable() {
             @Override
             public void run() {
                 if (hasChange) {
                     hasChange = false;
-                    nearbyAdapter.notifyDataSetChanged();
+                    updateNearby();
                 }
-                if (!isDestroy)
-                    handler.postDelayed(this, 3000);
+                refreshNearbyHandler.postDelayed(this, 3000);
             }
         }.run();
-        nearbyPeople.addAll(bluetoothManager.getNearby());
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         binding = null;
-        isDestroy = true;
+        refreshNearbyHandler.removeCallbacksAndMessages(null);
         disposable.dispose();
 
     }
@@ -115,8 +111,8 @@ public class HistoryPageFragment extends Fragment implements AdapterOnClickListe
                 .subscribeOn(Schedulers.single())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(l -> {
+                    historyChat.clear();
                     historyChat.addAll(l);
-                    currChats = l.size();
                     initView();
                 });
 //        userDispose = db.userDao().userList().subscribeOn(Schedulers.single())
@@ -134,17 +130,36 @@ public class HistoryPageFragment extends Fragment implements AdapterOnClickListe
 
     private void initView() {
         binding.pbLoadingChat.setVisibility(View.GONE);
-        if (currChats > prevChats) {
-            prevChats = currChats;
+        if (!historyChat.isEmpty()) {
             historyAdapter.notifyDataSetChanged();
-            binding.llRvHolder.setVisibility(View.VISIBLE);
+            if (binding.tvEmptyChat.getVisibility() == View.GONE) {
+                binding.tvEmptyChat.setVisibility(View.GONE);
+                binding.llRvHolder.setVisibility(View.VISIBLE);
 //            binding.ivEmptyChat.setVisibility(View.GONE);
-            binding.tvEmptyChat.setVisibility(View.GONE);
+            }
         } else {
             binding.llRvHolder.setVisibility(View.GONE);
-//            binding.ivEmptyChat.setVisibility(View.VISIBLE);
             binding.tvEmptyChat.setVisibility(View.VISIBLE);
+//            binding.ivEmptyChat.setVisibility(View.VISIBLE);
         }
+        if (nearbyPeople.isEmpty()) {
+            binding.rvNearby.setVisibility(View.GONE);
+            binding.tvNoNearby.setVisibility(View.VISIBLE);
+        } else {
+            binding.tvNoNearby.setVisibility(View.GONE);
+            binding.rvNearby.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void updateNearby() {
+        if (nearbyPeople.isEmpty()) {
+            binding.rvNearby.setVisibility(View.GONE);
+            binding.tvNoNearby.setVisibility(View.VISIBLE);
+        } else {
+            binding.tvNoNearby.setVisibility(View.GONE);
+            binding.rvNearby.setVisibility(View.VISIBLE);
+        }
+        nearbyAdapter.notifyDataSetChanged();
     }
 
 //    private void getMessages() {

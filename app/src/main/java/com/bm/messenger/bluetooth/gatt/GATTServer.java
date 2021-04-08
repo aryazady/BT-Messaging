@@ -15,18 +15,14 @@ public class GATTServer extends BluetoothGattServerCallback {
     private final GattHandler callbackHandler;
     private BluetoothGattServer server;
 
-    public GATTServer(Context mContext, BluetoothManager bluetoothManager, GattHandler callbackHandler) {
+    public GATTServer(Context mContext, BluetoothManager bluetoothManager, GattHandler gattHandler) {
         server = bluetoothManager.openGattServer(mContext, this);
-        this.callbackHandler = callbackHandler;
+        this.callbackHandler = gattHandler;
     }
 
     public boolean addService(BluetoothGattService service) {
         return server.addService(service);
     }
-
-//    public boolean addClient(BluetoothDevice device) {
-//        return server.connect(device, false);
-//    }
 
     public void terminate() {
         if (server == null)
@@ -44,9 +40,9 @@ public class GATTServer extends BluetoothGattServerCallback {
     @Override
     public void onCharacteristicWriteRequest(BluetoothDevice device, int requestId, BluetoothGattCharacteristic characteristic, boolean preparedWrite, boolean responseNeeded, int offset, byte[] value) {
 //        super.onCharacteristicWriteRequest(device, requestId, characteristic, preparedWrite, responseNeeded, offset, value);
+        boolean isMine = callbackHandler.onMessageReceive(new String(value));
         if (responseNeeded)
-            server.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value);
-        callbackHandler.onMessageReceive(new String(value));
+            server.sendResponse(device, requestId, isMine ? BluetoothGatt.GATT_SUCCESS : BluetoothGatt.GATT_WRITE_NOT_PERMITTED, offset, value);
     }
 
     @Override

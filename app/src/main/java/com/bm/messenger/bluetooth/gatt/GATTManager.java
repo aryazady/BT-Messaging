@@ -1,7 +1,6 @@
 package com.bm.messenger.bluetooth.gatt;
 
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
@@ -13,6 +12,7 @@ import android.util.Log;
 import androidx.room.EmptyResultSetException;
 
 import com.bm.messenger.database.Database;
+import com.bm.messenger.model.BTDeviceModel;
 import com.bm.messenger.model.MessageModel;
 import com.bm.messenger.model.UserModel;
 import com.bm.messenger.ui.fragment.NearbyFindListener;
@@ -20,11 +20,9 @@ import com.bm.messenger.utility.Utility;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -55,7 +53,7 @@ public class GATTManager implements GattHandler {
             BluetoothGattCharacteristic.PROPERTY_READ,
             BluetoothGattCharacteristic.PERMISSION_READ
     );
-    private final BluetoothManager bluetoothManager;
+    //    private final BluetoothManager bluetoothManager;
     private final Database db;
     //    private final BluetoothGattCharacteristic characteristicUser = new BluetoothGattCharacteristic(UUID.fromString(CHARACTERISTIC_USER_UUID),
 //            BluetoothGattCharacteristic.PROPERTY_READ, BluetoothGattCharacteristic.PERMISSION_READ
@@ -71,19 +69,23 @@ public class GATTManager implements GattHandler {
 //            BluetoothGattDescriptor.PERMISSION_READ);
 //    private final BluetoothGattDescriptor descriptorMessageCounter = new BluetoothGattDescriptor(UUID.fromString(DESCRIPTOR_MESSAGE_COUNTER),
 //            BluetoothGattDescriptor.PERMISSION_READ);
-    private final Set<BluetoothDevice> bluetoothDevices = new HashSet<>();
+    private final List<BTDeviceModel> bluetoothDevices = new ArrayList<>();
     private final Map<UserModel, BluetoothDevice> nearbyPeople = new HashMap<>();
     //    private final ArrayList<BluetoothDevice> pendingSync = new ArrayList<>();
     private final CompositeDisposable disposables = new CompositeDisposable();
     private final List<String> unsentMessage = new ArrayList<>();
+    //    private final AdvertiseHandler advertiseHandler;
     private NearbyFindListener nearbyFindListener;
     private GATTServer server;
     private GATTClient client;
     private Context mContext;
     private UserModel currentUser;
+    private com.bm.messenger.bluetooth.BluetoothManager bluetoothManager;
 
-    public GATTManager(Context context, BluetoothManager bluetoothManager) {
+    public GATTManager(Context context,/*BluetoothManager bluetoothManager, AdvertiseHandler advertiseHandler*/com.bm.messenger.bluetooth.BluetoothManager bluetoothManager) {
         mContext = context;
+//        this.bluetoothManager = bluetoothManager;
+//        this.advertiseHandler = advertiseHandler;
         this.bluetoothManager = bluetoothManager;
         db = new Database();
         getCurrentUser();
@@ -115,13 +117,33 @@ public class GATTManager implements GattHandler {
         initServer();
     }
 
+    public void clearDevices() {
+        for (BTDeviceModel device : bluetoothDevices)
+            device.setAround(false);
+    }
+
     public void addDevice(BluetoothDevice device) {
-        if (bluetoothDevices.add(device)) {
+        BTDeviceModel deviceModel = new BTDeviceModel(device);
+        if (!bluetoothDevices.contains(deviceModel)) {
             Log.d(TAG, "Device added: " + device.getAddress());
+            bluetoothDevices.add(new BTDeviceModel(device, true));
             client.getUserData(device);
-        }
+        } else
+            bluetoothDevices.get(bluetoothDevices.indexOf(deviceModel)).setAround(true);
 //            if (!server.addClient(device))
 //                Utility.getToast(mContext, "Can't Add Client " + device.getName());
+    }
+
+    public void updateDevices() {
+        Iterator<BTDeviceModel> iterator = bluetoothDevices.iterator();
+        while (iterator.hasNext()) {
+            BTDeviceModel model = iterator.next();
+            if (!model.isAround()) {
+                Log.d(TAG, "Device removed: " + model.getDevice().getAddress());
+                iterator.remove();
+                removeNearby(model.getDevice());
+            }
+        }
     }
 
     public void setNearbyFindListener(NearbyFindListener nearbyFind) {
@@ -130,11 +152,12 @@ public class GATTManager implements GattHandler {
 
     private void initClient() {
         if (client == null)
-            client = new GATTClient(mContext, bluetoothManager, this);
+            client = new GATTClient(mContext, /*bluetoothManager,*/ this);
     }
 
     private void initServer() {
         if (server == null) {
+            BluetoothManager bluetoothManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
             server = new GATTServer(mContext, bluetoothManager, this);
             if (!service.addCharacteristic(writeCharacteristic))
                 Utility.getToast(mContext, "Can't Add WRITE to Host");
@@ -146,11 +169,16 @@ public class GATTManager implements GattHandler {
     }
 
     public void terminate() {
-        disposables.dispose();
+        nearbyPeople.clear();
+        bluetoothDevices.clear();
         client.terminate();
         server.terminate();
         client = null;
         server = null;
+    }
+
+    public void dispose() {
+        disposables.dispose();
     }
 
     public void sendMessage(String message) {
@@ -159,7 +187,7 @@ public class GATTManager implements GattHandler {
                 bluetoothDevices.clear();
             unsentMessage.add(message);
         } else
-            client.sendMessage(new ArrayList<>(nearbyPeople.values()), message);
+            client.sendMessage(message);
     }
 
 //    private void Sync(BluetoothDevice device) {
@@ -181,19 +209,27 @@ public class GATTManager implements GattHandler {
                 iterator.remove();
             }
         }
+        notifyGattChange();
         notifyNearbyChange();
     }
 
+//    @Override
+//    public void onStateChange(BluetoothDevice device, int state) {
+//        if (state == BluetoothProfile.STATE_CONNECTED || state == BluetoothProfile.STATE_CONNECTING) {
+//            //TODO stop advertising
+//        } else if (state == BluetoothProfile.STATE_DISCONNECTED)
+//            //TODO start advertising
+//            ;
+////        else if (state == BluetoothGatt.GATT_FAILURE) {
+////            Log.d(TAG, "Device removed. state: " + state);
+////            bluetoothDevices.remove(new BluetoothDeviceModel(device));
+////            removeNearby(device);
+////        }
+//    }
+
     @Override
     public void onStateChange(BluetoothDevice device, int state) {
-        if (state == BluetoothProfile.STATE_CONNECTED) {
-            if (bluetoothDevices.add(device))
-                client.getUserData(device);
-        } else if (state == BluetoothGatt.GATT_FAILURE || state == 133) {
-            Log.d(TAG, "Device removed. state: " + state);
-            bluetoothDevices.remove(device);
-            removeNearby(device);
-        }
+        bluetoothManager.onStateChange(state);
     }
 
     @Override
@@ -205,22 +241,26 @@ public class GATTManager implements GattHandler {
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(l -> {
                         nearbyPeople.put(user, device);
-                        notifyGattFind();
+                        notifyGattChange();
                         notifyNearbyChange();
                     }, throwable -> {
                         if (throwable instanceof SQLiteConstraintException) {
                             nearbyPeople.put(user, device);
-                            notifyGattFind();
+                            notifyGattChange();
                             notifyNearbyChange();
                         }
                     }));
         }
     }
 
-    private void notifyGattFind() {
-        if (unsentMessage.size() > 0)
-            client.sendMessage(new ArrayList<>(nearbyPeople.values()), unsentMessage);
-        unsentMessage.clear();
+    private void notifyGattChange() {
+        client.updateNearby(new ArrayList<>(nearbyPeople.values()));
+        if (!nearbyPeople.isEmpty()) {
+            if (unsentMessage.size() > 0) {
+                client.sendMessage(unsentMessage);
+                unsentMessage.clear();
+            }
+        }
     }
 
     private void notifyNearbyChange() {
@@ -270,7 +310,7 @@ public class GATTManager implements GattHandler {
 //    }
 
     @Override
-    public void onMessageReceive(String message) {
+    public boolean onMessageReceive(String message) {
         final String[] data = message.split("\\$");
         MessageModel messageModel = null;
         if (data.length == 5) {
@@ -286,8 +326,9 @@ public class GATTManager implements GattHandler {
                             sendMessage(message);
                     }, throwable -> {
                     }));
-
+            return messageModel.dst != null && messageModel.dst.equals(currentUser.id);
         }
+        return false;
 //        for (String s : result)
 //            message = message.concat(s + " ");
 //        Toast.makeText(mContext, message, Toast.LENGTH_SHORT).show();

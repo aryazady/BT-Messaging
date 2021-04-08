@@ -1,6 +1,7 @@
 package com.bm.messenger.bluetooth;
 
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.AdvertiseCallback;
 import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.AdvertiseSettings;
@@ -16,6 +17,7 @@ import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelUuid;
+import android.util.Log;
 
 import androidx.core.os.HandlerCompat;
 
@@ -29,7 +31,7 @@ import java.util.List;
 
 public class BluetoothManager extends ScanCallback {
 
-    private static final String TAG = "BluetoothManager";
+    private static final String TAG = "BTManager";
     private static final long SCAN_PERIOD = 3000;
     private static final String ADVERTISE_UUID = "4f000566-8bfe-11eb-8dcd-0242ac130003";
     private final ScanFilter scanFilter = new ScanFilter.Builder()
@@ -39,7 +41,7 @@ public class BluetoothManager extends ScanCallback {
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build();
     //    private final ExecutorService executorService = Executors.newFixedThreadPool(4);
-    private final Handler handler = HandlerCompat.createAsync(Looper.getMainLooper());
+    private final Handler scanHandler = HandlerCompat.createAsync(Looper.getMainLooper());
     private Context mContext;
     //    private SocketHandler socketHandler;
     private BluetoothLeScanner bluetoothLeScanner;
@@ -48,22 +50,26 @@ public class BluetoothManager extends ScanCallback {
 //    private BluetoothGattServer gattServer;
     //    private BluetoothLeService bluetoothService;
     private BluetoothLeAdvertiser advertiser;
-    private android.bluetooth.BluetoothManager bluetoothManager;
+    //    private android.bluetooth.BluetoothManager bluetoothManager;
     private GATTManager gattManager;
     private boolean isScanning;
-    private boolean isAdvertising = false;
+    private boolean isConnect;
+    private volatile boolean isAdvertising = false;
     private final AdvertiseCallback advertiseCallback = new AdvertiseCallback() {
         @Override
         public void onStartSuccess(AdvertiseSettings settingsInEffect) {
             super.onStartSuccess(settingsInEffect);
+            Log.d(TAG, "Advertising Success");
             isAdvertising = true;
+            gattManager.init();
         }
 
         @Override
         public void onStartFailure(int errorCode) {
             super.onStartFailure(errorCode);
+            Log.d(TAG, "Advertising Failed");
             isAdvertising = false;
-            gattManager.terminate();
+            terminate();
             if (errorCode == ADVERTISE_FAILED_DATA_TOO_LARGE)
                 Utility.getToast(mContext, "Long Bluetooth Name");
         }
@@ -86,11 +92,9 @@ public class BluetoothManager extends ScanCallback {
                 switch (state) {
                     case BluetoothAdapter.STATE_ON:
                         startAdvertising();
-                        gattManager.init();
                         break;
                     case BluetoothAdapter.STATE_TURNING_OFF:
                         stopAdvertising();
-                        gattManager.terminate();
                         break;
                 }
             }
@@ -99,12 +103,12 @@ public class BluetoothManager extends ScanCallback {
 
     public BluetoothManager(Context context) {
         mContext = context;
-        bluetoothManager = (android.bluetooth.BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
+        android.bluetooth.BluetoothManager bluetoothManager = (android.bluetooth.BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
 //        socketHandler = new SocketHandler(mContext, bluetoothAdapter);
-        gattManager = new GATTManager(mContext, bluetoothManager);
-        if (bluetoothAdapter.isEnabled())
-            gattManager.init();
+        gattManager = new GATTManager(mContext, this /*bluetoothManager,*/);
+//        if (bluetoothAdapter.isEnabled())
+//            gattManager.init();
     }
 
     public BroadcastReceiver getBluetoothReceiver() {
@@ -113,6 +117,10 @@ public class BluetoothManager extends ScanCallback {
 
     public BluetoothAdapter getAdapter() {
         return bluetoothAdapter;
+    }
+
+    public List<UserModel> getNearby() {
+        return gattManager.getNearby();
     }
 
     public void setNearbyFindListener(NearbyFindListener listener) {
@@ -147,19 +155,31 @@ public class BluetoothManager extends ScanCallback {
             ArrayList<ScanFilter> scanFilters = new ArrayList<>();
             scanFilters.add(scanFilter);
             if (bluetoothLeScanner != null && bluetoothAdapter.isEnabled()) {
-                if (!isScanning) {
+                if (!isScanning && !isConnect) {
                     isScanning = true;
-                    handler.postDelayed(this::stopScanning, SCAN_PERIOD);
+                    gattManager.clearDevices();
+                    scanHandler.postDelayed(this::stopScanning, SCAN_PERIOD);
                     bluetoothLeScanner.startScan(scanFilters, scanSettings, this);
                 }
             }
         }
     }
 
+    public void stopAdvertising() {
+        if (advertiser != null && isAdvertising) {
+            isAdvertising = false;
+            advertiser.stopAdvertising(advertiseCallback);
+            terminate();
+        }
+//        if (bluetoothAdapter.isDiscovering())
+//            bluetoothAdapter.cancelDiscovery();
+    }
+
     private void stopScanning() {
         if (bluetoothLeScanner != null && bluetoothAdapter.isEnabled())
             bluetoothLeScanner.stopScan(this);
         isScanning = false;
+        gattManager.updateDevices();
     }
 
     public void sendMessage(String message) {
@@ -181,17 +201,38 @@ public class BluetoothManager extends ScanCallback {
 //            bluetoothDevices.remove(device);
 //    }
 
-    public void stopAdvertising() {
-        if (advertiser != null) {
-            isAdvertising = false;
-            advertiser.stopAdvertising(advertiseCallback);
-        }
-//        if (bluetoothAdapter.isDiscovering())
-//            bluetoothAdapter.cancelDiscovery();
+//    @Override
+//    public void startAdvertising(boolean isConnectable) {
+//        if (isAdvertising) {
+//            if (this.isConnectable != isConnectable) {
+//                stopAdvertise();
+//                startAdvertise(isConnectable);
+//            }
+//        } else
+//            startAdvertise(isConnectable);
+//    }
+//
+//    @Override
+//    public void stopAdvertising() {
+//        stopAdvertise();
+//    }
+
+    private void terminate() {
+        gattManager.terminate();
     }
 
-    public void terminate() {
-        gattManager.terminate();
+    public void dispose() {
+        gattManager.dispose();
+    }
+
+    public void onStateChange(int state) {
+        if (state == BluetoothProfile.STATE_CONNECTING && !isConnect) {
+            isConnect = true;
+            scanHandler.removeCallbacksAndMessages(null);
+            stopScanning();
+        } else if (state == BluetoothProfile.STATE_DISCONNECTED) {
+            isConnect = false;
+        }
     }
 
 //    @Override
@@ -248,9 +289,5 @@ public class BluetoothManager extends ScanCallback {
         for (ScanResult result : results)
 //            socketHandler.addDevice(result.getDevice());
             gattManager.addDevice(result.getDevice());
-    }
-
-    public List<UserModel> getNearby() {
-        return gattManager.getNearby();
     }
 }

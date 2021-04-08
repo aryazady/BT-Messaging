@@ -59,8 +59,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_height="wrap_content"
             android:orientation="vertical">
 
             <TextView
@@ -71,10 +70,18 @@
                 android:text="@string/nearby_people"
                 android:textColor="@color/white" />
 
+            <TextView
+                android:id="@+id/tv_no_nearby"
+                android:layout_width="match_parent"
+                android:text="@string/no_one_around"
+                android:gravity="center"
+                android:layout_height="88dp" />
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_nearby"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
         </LinearLayout>
 
     </LinearLayout>

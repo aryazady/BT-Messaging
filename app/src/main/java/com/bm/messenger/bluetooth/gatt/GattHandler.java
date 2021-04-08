@@ -17,5 +17,5 @@ public interface GattHandler {
 
     void insertUser(BluetoothDevice device,String userData);
 
-    void onMessageReceive(String msg);
+    boolean onMessageReceive(String msg);
 }
