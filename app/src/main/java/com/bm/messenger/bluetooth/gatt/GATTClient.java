@@ -14,6 +14,7 @@ import android.util.Log;
 import androidx.core.os.HandlerCompat;
 
 import com.bm.messenger.model.DeviceUnsentMessageModel;
+import com.bm.messenger.model.ReadQueueModel;
 import com.bm.messenger.utility.Utility;
 
 import java.lang.reflect.Method;
@@ -31,7 +32,7 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
     private static final int RW_TIMED_OUT = 1864;
     private final Context mContext;
     //    private final Queue<BluetoothDevice> readQueue = new LinkedList<>();
-    private final List<BluetoothDevice> readQueue = new ArrayList<>();
+    private final List<ReadQueueModel> readQueue = new ArrayList<>();
     private final List<String> writeQueue = new ArrayList<>();
     private final Handler connectionTimeoutHandler = HandlerCompat.createAsync(Looper.getMainLooper());
     private final Handler rwTimeoutHandler = HandlerCompat.createAsync(Looper.getMainLooper());
@@ -88,7 +89,7 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
                         try {
                             BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(GattHandler.READ_CHARACTERISTIC_UUID));
                             gatt.readCharacteristic(characteristic);
-                        } catch (NullPointerException e) {
+                        } catch (Exception e) {
                             onFailed(gatt, status);
                         }
                     } else if (isWriting) {
@@ -102,7 +103,7 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
                                 characteristic.setValue(writeQueue.get(writeIndex));
                             }
                             gatt.writeCharacteristic(characteristic);
-                        } catch (NullPointerException e) {
+                        } catch (Exception e) {
                             onFailed(gatt, status);
                         }
                     }
@@ -184,19 +185,17 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
         Log.d(TAG, "Failed");
 //        if (isWriting && !isFromQueue)
 //            writeQueue.add(data);
-        if (isReading && !fromQueue)
-            readQueue.add(gatt.getDevice());
+        if (isReading)
+            if (!fromQueue)
+                readQueue.add(new ReadQueueModel(gatt.getDevice()));
+            else if (pruneReadQueue(gatt.getDevice()))
+                refreshGatt(gatt);
         fromQueue = false;
         isReading = false;
         connectionTimeoutHandler.removeCallbacksAndMessages(null);
         rwTimeoutHandler.removeCallbacksAndMessages(null);
         if (state == RW_TIMED_OUT) {
-            try {
-                final Method refresh = gatt.getClass().getMethod("refresh");
-                refresh.invoke(gatt);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            refreshGatt(gatt);
 //            nearbyDevices.remove(gatt.getDevice());
 //            gattHandler.onStateChange(gatt.getDevice(), BluetoothProfile.);
         }
@@ -216,6 +215,15 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
             broadcast();
         } else
             checkQueue();
+    }
+
+    private void refreshGatt(BluetoothGatt gatt) {
+        try {
+            final Method refresh = gatt.getClass().getMethod("refresh");
+            refresh.invoke(gatt);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void connect(BluetoothDevice device) {
@@ -244,7 +252,7 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
             connect(device);
             gattHandler.onStateChange(null, BluetoothProfile.STATE_CONNECTING);
         } else {
-            readQueue.add(device);
+            readQueue.add(new ReadQueueModel(device));
         }
     }
 
@@ -325,6 +333,22 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
         gattHandler.onStateChange(null, BluetoothProfile.STATE_DISCONNECTED);
     }
 
+    private boolean pruneReadQueue(BluetoothDevice device) {
+        Iterator<ReadQueueModel> iterator = readQueue.iterator();
+        while (iterator.hasNext()) {
+            ReadQueueModel model = iterator.next();
+            if (model.getDevice() == device) {
+                if (model.getAttempt() >= 5) {
+                    iterator.remove();
+                    gattHandler.onStateChange(device, BluetoothProfile.STATE_DISCONNECTED);
+                    return true;
+                }
+                break;
+            }
+        }
+        return false;
+    }
+
     public void terminate() {
         if (currGatt == null)
             return;
@@ -345,12 +369,14 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
 
     private void checkQueue() {
         Log.d(TAG, "Checking Queue. Write: " + writeQueue.size() + " Read: " + readQueue.size() + " Lost Msg: " + lostMessages.size());
-        if (!lostMessages.isEmpty()) {
+        if (!readQueue.isEmpty() && nearbyDevices.size() <= 4) {
+            fromQueue = true;
+            ReadQueueModel model = readQueue.get(0);
+            model.attempted();
+            getUserData(model.getDevice());
+        } else if (!lostMessages.isEmpty()) {
             isLostMessage = true;
             sendMessage();
-        } else if (!readQueue.isEmpty() && readQueue.size() >= writeQueue.size() - 1) {
-            fromQueue = true;
-            getUserData(readQueue.get(0));
         } else if (!writeQueue.isEmpty()) {
             sendMessage();
         } else
@@ -371,10 +397,10 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
     }
 
     private void updateReadQueue(List<BluetoothDevice> devices) {
-        Iterator<BluetoothDevice> iterator = readQueue.iterator();
+        Iterator<ReadQueueModel> iterator = readQueue.iterator();
         while (iterator.hasNext()) {
-            BluetoothDevice device = iterator.next();
-            if (!devices.contains(device))
+            ReadQueueModel model = iterator.next();
+            if (!devices.contains(model.getDevice()))
                 iterator.remove();
         }
     }

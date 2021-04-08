@@ -4,7 +4,6 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
-import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.database.sqlite.SQLiteConstraintException;
 import android.util.Log;
@@ -81,6 +80,7 @@ public class GATTManager implements GattHandler {
     private Context mContext;
     private UserModel currentUser;
     private com.bm.messenger.bluetooth.BluetoothManager bluetoothManager;
+    private boolean isFetching;
 
     public GATTManager(Context context,/*BluetoothManager bluetoothManager, AdvertiseHandler advertiseHandler*/com.bm.messenger.bluetooth.BluetoothManager bluetoothManager) {
         mContext = context;
@@ -183,7 +183,7 @@ public class GATTManager implements GattHandler {
 
     public void sendMessage(String message) {
         if (nearbyPeople.size() == 0) {
-            if (bluetoothDevices.size() > 0 && !client.isReading())
+            if (bluetoothDevices.size() > 0 && !(client.isReading() || isFetching))
                 bluetoothDevices.clear();
             unsentMessage.add(message);
         } else
@@ -216,9 +216,7 @@ public class GATTManager implements GattHandler {
 //    @Override
 //    public void onStateChange(BluetoothDevice device, int state) {
 //        if (state == BluetoothProfile.STATE_CONNECTED || state == BluetoothProfile.STATE_CONNECTING) {
-//            //TODO stop advertising
 //        } else if (state == BluetoothProfile.STATE_DISCONNECTED)
-//            //TODO start advertising
 //            ;
 ////        else if (state == BluetoothGatt.GATT_FAILURE) {
 ////            Log.d(TAG, "Device removed. state: " + state);
@@ -229,21 +227,27 @@ public class GATTManager implements GattHandler {
 
     @Override
     public void onStateChange(BluetoothDevice device, int state) {
-        bluetoothManager.onStateChange(state);
+        if (device == null)
+            bluetoothManager.onStateChange(state);
+        else
+            bluetoothDevices.remove(new BTDeviceModel(device));
     }
 
     @Override
     public void insertUser(BluetoothDevice device, String userData) {
+        isFetching = true;
         String[] userArray = userData.split("\\$");
         if (userArray.length == 2) {
             UserModel user = new UserModel(userArray[0], userArray[1]);
             disposables.add(db.getDatabase(mContext).userDao().insert(user).subscribeOn(Schedulers.computation())
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(l -> {
+                        isFetching = false;
                         nearbyPeople.put(user, device);
                         notifyGattChange();
                         notifyNearbyChange();
                     }, throwable -> {
+                        isFetching = false;
                         if (throwable instanceof SQLiteConstraintException) {
                             nearbyPeople.put(user, device);
                             notifyGattChange();
