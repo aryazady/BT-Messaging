@@ -1,6 +1,9 @@
 <component name="InspectionProjectProfileManager">
   <profile version="1.0">
     <option name="myName" value="Project Default" />
+    <inspection_tool class="JavaReflectionMemberAccess" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredClassNamesString" value="java.lang.Object,java.lang.Throwable,android.bluetooth.BluetoothGatt" />
+    </inspection_tool>
     <inspection_tool class="RawUseOfParameterizedType" enabled="true" level="WEAK WARNING" enabled_by_default="true" />
   </profile>
 </component>

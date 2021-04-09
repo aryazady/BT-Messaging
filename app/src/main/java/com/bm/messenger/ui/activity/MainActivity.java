@@ -13,6 +13,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 
@@ -109,7 +110,7 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
         super.onDestroy();
         db.closeDatabase();
         binding = null;
-        bluetoothManager.dispose();
+        bluetoothManager.destroy();
 //        unregisterReceiver(bluetoothManager);
     }
 
@@ -146,7 +147,7 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
         if (bluetoothManager.getAdapter() != null) {
             if (!Utility.checkPermission(getBaseContext()))
                 getPermission();
-            else
+            else if (bluetoothManager.getAdapter().isEnabled())
                 locationStatusCheck();
             initView();
         }
@@ -378,9 +379,9 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
 
     private void alertNoLocation() {
         final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage("Your GPS seems to be disabled, do you want to enable it?")
+        builder.setMessage(getResources().getString(R.string.enable_gps))
                 .setCancelable(false)
-                .setPositiveButton("Yes", (dialog, id) -> startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)))
+                .setPositiveButton("Yes", (dialog, id) -> startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)))
                 .setNegativeButton("No", (dialog, id) -> dialog.cancel());
         final AlertDialog alert = builder.create();
         alert.show();

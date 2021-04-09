@@ -21,7 +21,7 @@ import com.bm.messenger.model.ChatModel;
 import com.bm.messenger.model.LiveDataModel;
 import com.bm.messenger.model.MessageModel;
 import com.bm.messenger.ui.activity.MessageHandler;
-import com.bm.messenger.ui.fragment.navigation.BackPressHandler;
+import com.bm.messenger.ui.fragment.interfaces.BackPressHandler;
 import com.bm.messenger.utility.SharedViewModel;
 import com.bm.messenger.utility.Utility;
 

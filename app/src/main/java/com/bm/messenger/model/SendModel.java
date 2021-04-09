@@ -5,13 +5,13 @@ import android.bluetooth.BluetoothDevice;
 import java.io.Serializable;
 import java.util.List;
 
-public class DeviceUnsentMessageModel implements Serializable {
+public class SendModel implements Serializable {
 
     private BluetoothDevice device;
     private List<String> messages;
     private int attempt = 0;
 
-    public DeviceUnsentMessageModel(BluetoothDevice device, List<String> messages) {
+    public SendModel(BluetoothDevice device, List<String> messages) {
         this.device = device;
         this.messages = messages;
     }
@@ -32,6 +32,10 @@ public class DeviceUnsentMessageModel implements Serializable {
         for (String msg : messages)
             if (!this.messages.contains(msg))
                 this.messages.add(msg);
+    }
+
+    public void removeMessage(String message) {
+        messages.remove(message);
     }
 
     public void attempted() {

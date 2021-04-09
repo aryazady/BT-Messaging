@@ -25,6 +25,7 @@ import com.bm.messenger.databinding.FragmentHistoryChatBinding;
 import com.bm.messenger.model.ChatModel;
 import com.bm.messenger.model.LiveDataModel;
 import com.bm.messenger.model.UserModel;
+import com.bm.messenger.ui.fragment.interfaces.NearbyFindListener;
 import com.bm.messenger.utility.SharedViewModel;
 
 import java.util.ArrayList;

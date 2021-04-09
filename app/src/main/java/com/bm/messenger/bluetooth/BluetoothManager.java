@@ -23,7 +23,7 @@ import androidx.core.os.HandlerCompat;
 
 import com.bm.messenger.bluetooth.gatt.GATTManager;
 import com.bm.messenger.model.UserModel;
-import com.bm.messenger.ui.fragment.NearbyFindListener;
+import com.bm.messenger.ui.fragment.interfaces.NearbyFindListener;
 import com.bm.messenger.utility.Utility;
 
 import java.util.ArrayList;
@@ -34,6 +34,7 @@ public class BluetoothManager extends ScanCallback {
     private static final String TAG = "BTManager";
     private static final long SCAN_PERIOD = 3000;
     private static final String ADVERTISE_UUID = "4f000566-8bfe-11eb-8dcd-0242ac130003";
+    private static final int GATT_AND_GATT_SERVER = -1;
     private final ScanFilter scanFilter = new ScanFilter.Builder()
             .setServiceUuid(ParcelUuid.fromString(ADVERTISE_UUID))
             .build();
@@ -61,7 +62,6 @@ public class BluetoothManager extends ScanCallback {
             super.onStartSuccess(settingsInEffect);
             Log.d(TAG, "Advertising Success");
             isAdvertising = true;
-            gattManager.init();
         }
 
         @Override
@@ -69,7 +69,7 @@ public class BluetoothManager extends ScanCallback {
             super.onStartFailure(errorCode);
             Log.d(TAG, "Advertising Failed");
             isAdvertising = false;
-            terminate();
+            terminate(BluetoothProfile.GATT_SERVER);
             if (errorCode == ADVERTISE_FAILED_DATA_TOO_LARGE)
                 Utility.getToast(mContext, "Long Bluetooth Name");
         }
@@ -92,6 +92,7 @@ public class BluetoothManager extends ScanCallback {
                 switch (state) {
                     case BluetoothAdapter.STATE_ON:
                         startAdvertising();
+                        gattManager.init();
                         break;
                     case BluetoothAdapter.STATE_TURNING_OFF:
                         stopAdvertising();
@@ -107,8 +108,8 @@ public class BluetoothManager extends ScanCallback {
         bluetoothAdapter = bluetoothManager.getAdapter();
 //        socketHandler = new SocketHandler(mContext, bluetoothAdapter);
         gattManager = new GATTManager(mContext, this /*bluetoothManager,*/);
-//        if (bluetoothAdapter.isEnabled())
-//            gattManager.init();
+        if (bluetoothAdapter.isEnabled())
+            gattManager.init();
     }
 
     public BroadcastReceiver getBluetoothReceiver() {
@@ -154,8 +155,8 @@ public class BluetoothManager extends ScanCallback {
                 bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
             ArrayList<ScanFilter> scanFilters = new ArrayList<>();
             scanFilters.add(scanFilter);
-            if (bluetoothLeScanner != null && bluetoothAdapter.isEnabled()) {
-                if (!isScanning && !isConnect) {
+            if (bluetoothLeScanner != null && bluetoothAdapter.isEnabled() && !isConnect) {
+                if (!isScanning) {
                     isScanning = true;
                     gattManager.clearDevices();
                     scanHandler.postDelayed(this::stopScanning, SCAN_PERIOD);
@@ -169,13 +170,16 @@ public class BluetoothManager extends ScanCallback {
         if (advertiser != null && isAdvertising) {
             isAdvertising = false;
             advertiser.stopAdvertising(advertiseCallback);
-            terminate();
+            stopScanning();
+            terminate(GATT_AND_GATT_SERVER);
         }
 //        if (bluetoothAdapter.isDiscovering())
 //            bluetoothAdapter.cancelDiscovery();
     }
 
     private void stopScanning() {
+        if (!isScanning)
+            return;
         if (bluetoothLeScanner != null && bluetoothAdapter.isEnabled())
             bluetoothLeScanner.stopScan(this);
         isScanning = false;
@@ -183,7 +187,7 @@ public class BluetoothManager extends ScanCallback {
     }
 
     public void sendMessage(String message) {
-        gattManager.sendMessage(message);
+        gattManager.sendMessage(message, null);
     }
 
 //    private ExecutorService getExecutor() {
@@ -217,18 +221,28 @@ public class BluetoothManager extends ScanCallback {
 //        stopAdvertise();
 //    }
 
-    private void terminate() {
-        gattManager.terminate();
+    private void terminate(int gattType) {
+        switch (gattType) {
+            case BluetoothProfile.GATT:
+                gattManager.terminateClient();
+                break;
+            case BluetoothProfile.GATT_SERVER:
+                gattManager.terminateServer();
+                break;
+            case GATT_AND_GATT_SERVER:
+                gattManager.terminateClient();
+                gattManager.terminateServer();
+                break;
+        }
     }
 
-    public void dispose() {
-        gattManager.dispose();
+    public void destroy() {
+        gattManager.destroy();
     }
 
     public void onStateChange(int state) {
         if (state == BluetoothProfile.STATE_CONNECTING && !isConnect) {
             isConnect = true;
-            scanHandler.removeCallbacksAndMessages(null);
             stopScanning();
         } else if (state == BluetoothProfile.STATE_DISCONNECTED) {
             isConnect = false;

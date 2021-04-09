@@ -1,4 +1,4 @@
-package com.bm.messenger.ui.fragment.navigation;
+package com.bm.messenger.ui.fragment.interfaces;
 
 public interface BackPressHandler {
     void onBackPressed();

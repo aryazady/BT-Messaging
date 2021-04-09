@@ -1,4 +1,4 @@
-package com.bm.messenger.ui.fragment;
+package com.bm.messenger.ui.fragment.interfaces;
 
 import com.bm.messenger.model.UserModel;
 

@@ -13,4 +13,5 @@
     <string name="history">History</string>
     <string name="nearby_people">Nearby People</string>
     <string name="no_one_around">no one around</string>
+    <string name="enable_gps">Your GPS seems to be disabled, do you want to enable it?</string>
 </resources>

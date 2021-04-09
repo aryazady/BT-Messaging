@@ -13,8 +13,9 @@ import androidx.room.EmptyResultSetException;
 import com.bm.messenger.database.Database;
 import com.bm.messenger.model.BTDeviceModel;
 import com.bm.messenger.model.MessageModel;
+import com.bm.messenger.model.ReadQueueModel;
 import com.bm.messenger.model.UserModel;
-import com.bm.messenger.ui.fragment.NearbyFindListener;
+import com.bm.messenger.ui.fragment.interfaces.NearbyFindListener;
 import com.bm.messenger.utility.Utility;
 
 import java.util.ArrayList;
@@ -127,7 +128,7 @@ public class GATTManager implements GattHandler {
         if (!bluetoothDevices.contains(deviceModel)) {
             Log.d(TAG, "Device added: " + device.getAddress());
             bluetoothDevices.add(new BTDeviceModel(device, true));
-            client.getUserData(device);
+            client.getUserData(new ReadQueueModel(device));
         } else
             bluetoothDevices.get(bluetoothDevices.indexOf(deviceModel)).setAround(true);
 //            if (!server.addClient(device))
@@ -168,26 +169,35 @@ public class GATTManager implements GattHandler {
         }
     }
 
-    public void terminate() {
+    public void clearList() {
         nearbyPeople.clear();
         bluetoothDevices.clear();
+        notifyGattChange();
+    }
+
+    public void terminateClient() {
+        clearList();
         client.terminate();
-        server.terminate();
         client = null;
+    }
+
+    public void terminateServer() {
+        server.terminate();
         server = null;
     }
 
-    public void dispose() {
+    public void destroy() {
         disposables.dispose();
+
     }
 
-    public void sendMessage(String message) {
+    public void sendMessage(String message, BluetoothDevice excludeDevice) {
         if (nearbyPeople.size() == 0) {
             if (bluetoothDevices.size() > 0 && !(client.isReading() || isFetching))
                 bluetoothDevices.clear();
             unsentMessage.add(message);
         } else
-            client.sendMessage(message);
+            client.sendMessage(message, excludeDevice);
     }
 
 //    private void Sync(BluetoothDevice device) {
@@ -210,7 +220,6 @@ public class GATTManager implements GattHandler {
             }
         }
         notifyGattChange();
-        notifyNearbyChange();
     }
 
 //    @Override
@@ -245,13 +254,11 @@ public class GATTManager implements GattHandler {
                         isFetching = false;
                         nearbyPeople.put(user, device);
                         notifyGattChange();
-                        notifyNearbyChange();
                     }, throwable -> {
                         isFetching = false;
                         if (throwable instanceof SQLiteConstraintException) {
                             nearbyPeople.put(user, device);
                             notifyGattChange();
-                            notifyNearbyChange();
                         }
                     }));
         }
@@ -264,6 +271,7 @@ public class GATTManager implements GattHandler {
                 client.sendMessage(unsentMessage);
                 unsentMessage.clear();
             }
+            notifyNearbyChange();
         }
     }
 
@@ -314,7 +322,7 @@ public class GATTManager implements GattHandler {
 //    }
 
     @Override
-    public boolean onMessageReceive(String message) {
+    public boolean onMessageReceive(BluetoothDevice device, String message) {
         final String[] data = message.split("\\$");
         MessageModel messageModel = null;
         if (data.length == 5) {
@@ -327,7 +335,7 @@ public class GATTManager implements GattHandler {
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(l -> {
                         if (!(data.length == 5 && data[2].equals(currentUser.id)))
-                            sendMessage(message);
+                            sendMessage(message, device);
                     }, throwable -> {
                     }));
             return messageModel.dst != null && messageModel.dst.equals(currentUser.id);

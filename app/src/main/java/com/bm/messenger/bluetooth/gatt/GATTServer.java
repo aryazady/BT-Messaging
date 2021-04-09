@@ -40,7 +40,7 @@ public class GATTServer extends BluetoothGattServerCallback {
     @Override
     public void onCharacteristicWriteRequest(BluetoothDevice device, int requestId, BluetoothGattCharacteristic characteristic, boolean preparedWrite, boolean responseNeeded, int offset, byte[] value) {
 //        super.onCharacteristicWriteRequest(device, requestId, characteristic, preparedWrite, responseNeeded, offset, value);
-        boolean isMine = callbackHandler.onMessageReceive(new String(value));
+        boolean isMine = callbackHandler.onMessageReceive(device, new String(value));
         if (responseNeeded)
             server.sendResponse(device, requestId, isMine ? BluetoothGatt.GATT_SUCCESS : BluetoothGatt.GATT_WRITE_NOT_PERMITTED, offset, value);
     }

@@ -13,8 +13,9 @@ import android.util.Log;
 
 import androidx.core.os.HandlerCompat;
 
-import com.bm.messenger.model.DeviceUnsentMessageModel;
+import com.bm.messenger.model.DeviceMessageModel;
 import com.bm.messenger.model.ReadQueueModel;
+import com.bm.messenger.model.SendModel;
 import com.bm.messenger.utility.Utility;
 
 import java.lang.reflect.Method;
@@ -27,7 +28,7 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
 
     private static final String TAG = "GattClient";
     private static final int CONNECTION_TIME_OUT = 6000;
-    private static final int RW_TIME_OUT = 9000;
+    private static final int RW_TIME_OUT = 9000000;
     private static final int CONNECTION_TIMED_OUT = 1863;
     private static final int RW_TIMED_OUT = 1864;
     private final Context mContext;
@@ -40,13 +41,15 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
     //    private List<BluetoothGatt> clients = new ArrayList<>();
     private final GattHandler gattHandler;
     private final List<BluetoothDevice> nearbyDevices = new ArrayList<>();
-    private final List<DeviceUnsentMessageModel> lostMessages = new ArrayList<>();
+    private final List<SendModel> lostMessages = new ArrayList<>();
+    private final List<DeviceMessageModel> excludeDevice = new ArrayList<>();
+    private List<SendModel> sendQueue = new ArrayList<>();
     private volatile boolean isReading = false;
     private volatile boolean isWriting = false;
     //    private boolean isRW = false;
 //    private boolean isConnected = false;
     private volatile boolean fromQueue = false;
-    private volatile boolean isLostMessage = false;
+    //    private volatile boolean isLostMessage = false;
     //    private int currentMtu = 23;
     private int receiverDevice;
     private int writeIndex;
@@ -96,14 +99,42 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
                         BluetoothGattService service = gatt.getService(UUID.fromString(GattHandler.GATT_SERVICE_UUID));
                         try {
                             BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(GattHandler.WRITE_CHARACTERISTIC_UUID));
-                            if (isLostMessage) {
-                                lostMessages.get(receiverDevice).attempted();
-                                characteristic.setValue(lostMessages.get(receiverDevice).getMessages().get(writeIndex));
-                            } else {
-                                characteristic.setValue(writeQueue.get(writeIndex));
+                            SendModel model = sendQueue.get(receiverDevice);
+                            for (; ; ) {
+                                DeviceMessageModel messageModel = new DeviceMessageModel(model.getMessages().get(writeIndex), model.getDevice());
+                                if (excludeDevice.contains(messageModel)) {
+                                    excludeDevice.remove(messageModel);
+                                    writeIndex++;
+                                } else {
+                                    characteristic.setValue(model.getMessages().get(writeIndex));
+                                    gatt.writeCharacteristic(characteristic);
+                                    break;
+                                }
+                                if (writeIndex >= model.getMessages().size()) {
+                                    doneWriting(BluetoothGatt.GATT_WRITE_NOT_PERMITTED);
+                                    gatt.close();
+                                    broadcast();
+                                    break;
+                                }
                             }
-                            gatt.writeCharacteristic(characteristic);
+//                            characteristic.setValue(sendQueue.get(receiverDevice).getMessages().get(writeIndex));
+//                            if (isLostMessage) {
+//                                SendModel model = lostMessages.get(receiverDevice);
+//
+//                                characteristic.setValue(model.getMessages().get(writeIndex));
+//                                model.attempted();
+//                            } else {
+//                                if (excludeDevice.contains(new DeviceMessageModel(writeQueue.get(writeIndex), gatt.getDevice()))) {
+//                                    writeIndex++;
+//                                    if (writeIndex >= writeQueue.size()) {
+//                                        doneWriting(BluetoothGatt.GATT_WRITE_NOT_PERMITTED);
+//                                    }
+//                                }
+//                                characteristic.setValue(writeQueue.get(writeIndex));
+//                            }
+//                            gatt.writeCharacteristic(characteristic);
                         } catch (Exception e) {
+                            e.printStackTrace();
                             onFailed(gatt, status);
                         }
                     }
@@ -131,39 +162,47 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
             @Override
             public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
                 super.onCharacteristicWrite(gatt, characteristic, status);
-                Log.d(TAG, "characteristic wrote");
+                Log.d(TAG, "characteristic wrote: " + new String(characteristic.getValue()));
                 rwTimeoutHandler.removeCallbacksAndMessages(null);
                 if (characteristic.getUuid().toString().equals(GattHandler.WRITE_CHARACTERISTIC_UUID)) {
                     writeIndex++;
-                    if (isLostMessage) {
-                        if (writeIndex >= lostMessages.get(receiverDevice).getMessages().size()) {
-                            Log.d(TAG, "Writing Lost Message: Done");
-                            writeIndex = 0;
-                            if (status == BluetoothGatt.GATT_WRITE_NOT_PERMITTED)
-                                receiverDevice += 100000;
-                            else
-                                receiverDevice++;
-                            broadcast();
-                        } else {
-                            lostMessages.get(receiverDevice).attempted();
-                            characteristic.setValue(lostMessages.get(receiverDevice).getMessages().get(writeIndex));
-                            gatt.writeCharacteristic(characteristic);
-                        }
+//                    if (isLostMessage) {
+//                        SendModel model = lostMessages.get(receiverDevice);
+//                        if (writeIndex >= model.getMessages().size()) {
+//                            Log.d(TAG, "Writing Lost Message: Done");
+//                        } else {
+//                            model.attempted();
+//                            characteristic.setValue(model.getMessages().get(writeIndex));
+//                            gatt.writeCharacteristic(characteristic);
+//                        }
+//                    } else {
+                    if (writeIndex >= writeQueue.size()) {
+                        doneWriting(status);
+                        gatt.close();
+                        broadcast();
                     } else {
-                        if (writeIndex >= writeQueue.size()) {
-                            Log.d(TAG, "Writing Queue: Done");
-                            writeIndex = 0;
-                            if (status == BluetoothGatt.GATT_WRITE_NOT_PERMITTED)
-                                receiverDevice += 100000;
-                            else
-                                receiverDevice++;
-                            gatt.close();
-                            broadcast();
-                        } else {
-                            characteristic.setValue(writeQueue.get(writeIndex));
-                            gatt.writeCharacteristic(characteristic);
+                        SendModel model = sendQueue.get(receiverDevice);
+                        for (; ; ) {
+                            DeviceMessageModel messageModel = new DeviceMessageModel(model.getMessages().get(writeIndex), model.getDevice());
+                            if (excludeDevice.contains(messageModel)) {
+                                excludeDevice.remove(messageModel);
+                                writeIndex++;
+                            } else {
+                                characteristic.setValue(model.getMessages().get(writeIndex));
+                                gatt.writeCharacteristic(characteristic);
+                                break;
+                            }
+                            if (writeIndex >= model.getMessages().size()) {
+                                doneWriting(status);
+                                gatt.close();
+                                broadcast();
+                                break;
+                            }
                         }
+//                        characteristic.setValue(writeQueue.get(writeIndex));
+//                        gatt.writeCharacteristic(characteristic);
                     }
+//                }
                 }
             }
 
@@ -178,7 +217,18 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
                     Utility.getToast(mContext, "Can't get Max Throughput");
                 }
             }
-        };
+        }
+
+                ;
+    }
+
+    private void doneWriting(int status) {
+        Log.d(TAG, "going next device message writing");
+        writeIndex = 0;
+        if (status == BluetoothGatt.GATT_SUCCESS)
+            receiverDevice += 100000;
+        else
+            receiverDevice++;
     }
 
     private void onFailed(BluetoothGatt gatt, int state) {
@@ -204,13 +254,9 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
 //        gattHandler.onStateChange(gatt.getDevice(), BluetoothProfile.STATE_DISCONNECTING);
         if (isWriting) {
             writeIndex = 0;
-            for (DeviceUnsentMessageModel model : lostMessages)
-                if (model.getDevice() == gatt.getDevice()) {
-                    model.addMessage(writeQueue);
-                    broadcast();
-                    return;
-                }
-            lostMessages.add(new DeviceUnsentMessageModel(gatt.getDevice(), writeQueue));
+            SendModel sendModel = sendQueue.get(receiverDevice);
+            if (!sendModel.getMessages().isEmpty())
+                lostMessages.add(sendQueue.get(receiverDevice));
             receiverDevice++;
             broadcast();
         } else
@@ -246,13 +292,14 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
         currGatt.connect();
     }
 
-    public void getUserData(BluetoothDevice device) {
+    public void getUserData(ReadQueueModel readQueueModel) {
         if (!isWriting && !isReading) {
             isReading = true;
-            connect(device);
+            readQueueModel.attempted();
+            connect(readQueueModel.getDevice());
             gattHandler.onStateChange(null, BluetoothProfile.STATE_CONNECTING);
         } else {
-            readQueue.add(new ReadQueueModel(device));
+            readQueue.add(readQueueModel);
         }
     }
 
@@ -261,19 +308,18 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
     }
 
     private void sendMessage() {
-        if (!isWriting && !isReading) {
-            isWriting = true;
-            receiverDevice = 0;
-            broadcast();
-            gattHandler.onStateChange(null, BluetoothProfile.STATE_CONNECTING);
+        isWriting = true;
+        receiverDevice = 0;
+        broadcast();
+        gattHandler.onStateChange(null, BluetoothProfile.STATE_CONNECTING);
 //            connect(device);
-        } else
-            Log.d(TAG, isWriting ? "occupy writing" : "occupy reading");
     }
 
-    public void sendMessage(String message) {
+    public void sendMessage(String message, BluetoothDevice excludeDevice) {
 //        nearbyDevices.clear();
 //        nearbyDevices.addAll(devices);
+        if (excludeDevice != null)
+            this.excludeDevice.add(new DeviceMessageModel(message, excludeDevice));
         writeQueue.add(message);
         checkQueue();
     }
@@ -293,45 +339,55 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
 //        }
 //    }
 
-    private synchronized void broadcast() {
-        if (nearbyDevices.size() > 0)
-            if (isLostMessage) {
-                if (receiverDevice >= lostMessages.size()) {
-                    isLostMessage = false;
-                    receiverDevice = 0;
-                    pruneLostMessage();
-                    broadcast();
-                } else {
-                    connect(lostMessages.get(receiverDevice).getDevice());
-                }
-            } else {
-                if (receiverDevice >= nearbyDevices.size()) {
-                    isWriting = false;
-                    writeQueue.clear();
-                    checkQueue();
-                } else {
-                    connect(nearbyDevices.get(receiverDevice));
-                }
-            }
-        else
-            noDevice();
+    private void broadcast() {
+//        if (!sendQueue.isEmpty()) {
+        if (receiverDevice >= sendQueue.size()) {
+            isWriting = false;
+            sendQueue.clear();
+            pruneLostMessage();
+            checkQueue();
+        } else
+            connect(sendQueue.get(receiverDevice).getDevice());
+//        } else
+//            noDevice();
+//        if (nearbyDevices.size() > 0)
+//            if (isLostMessage) {
+//                if (receiverDevice >= lostMessages.size()) {
+//                    isLostMessage = false;
+//                    receiverDevice = 0;
+//                    pruneLostMessage();
+//                    broadcast();
+//                } else {
+//                    connect(lostMessages.get(receiverDevice).getDevice());
+//                }
+//            } else {
+//                if (receiverDevice >= nearbyDevices.size()) {
+//                    isWriting = false;
+//                    sendQueue.clear();
+//                    checkQueue();
+//                } else {
+//                    connect(nearbyDevices.get(receiverDevice));
+//                }
+//            }
+//        else
+//            noDevice();
     }
 
     private void pruneLostMessage() {
-        Iterator<DeviceUnsentMessageModel> iterator = lostMessages.iterator();
+        Iterator<SendModel> iterator = lostMessages.iterator();
         while (iterator.hasNext()) {
-            DeviceUnsentMessageModel model = iterator.next();
+            SendModel model = iterator.next();
             if (model.getAttempt() > 2)
                 iterator.remove();
         }
     }
 
-    private void noDevice() {
-        isWriting = false;
-        fromQueue = false;
-        isLostMessage = false;
-        gattHandler.onStateChange(null, BluetoothProfile.STATE_DISCONNECTED);
-    }
+//    private void noDevice() {
+//        isWriting = false;
+//        fromQueue = false;
+////        isLostMessage = false;
+//        gattHandler.onStateChange(null, BluetoothProfile.STATE_DISCONNECTED);
+//    }
 
     private boolean pruneReadQueue(BluetoothDevice device) {
         Iterator<ReadQueueModel> iterator = readQueue.iterator();
@@ -369,18 +425,41 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
 
     private void checkQueue() {
         Log.d(TAG, "Checking Queue. Write: " + writeQueue.size() + " Read: " + readQueue.size() + " Lost Msg: " + lostMessages.size());
-        if (!readQueue.isEmpty() && nearbyDevices.size() <= 4) {
-            fromQueue = true;
-            ReadQueueModel model = readQueue.get(0);
-            model.attempted();
-            getUserData(model.getDevice());
-        } else if (!lostMessages.isEmpty()) {
-            isLostMessage = true;
-            sendMessage();
-        } else if (!writeQueue.isEmpty()) {
-            sendMessage();
+        if (!isReading && !isWriting) {
+            if (!readQueue.isEmpty() && nearbyDevices.size() <= 4) {
+                fromQueue = true;
+                getUserData(readQueue.get(0));
+            } else if (!lostMessages.isEmpty()) {
+//                isLostMessage = true;
+                for (SendModel model : lostMessages) {
+                    model.addMessage(new ArrayList<>(writeQueue));
+                    model.attempted();
+                    sendQueue.add(model);
+                }
+                lostMessages.clear();
+                if (!writeQueue.isEmpty()) {
+                    for (BluetoothDevice device : nearbyDevices) {
+                        boolean contain = false;
+                        for (SendModel model : sendQueue)
+                            if (device == model.getDevice()) {
+                                contain = true;
+                                break;
+                            }
+                        if (!contain)
+                            sendQueue.add(new SendModel(device, new ArrayList<>(writeQueue)));
+                    }
+                    writeQueue.clear();
+                }
+                sendMessage();
+            } else if (!writeQueue.isEmpty()) {
+                for (BluetoothDevice device : nearbyDevices)
+                    sendQueue.add(new SendModel(device, new ArrayList<>(writeQueue)));
+                writeQueue.clear();
+                sendMessage();
+            } else
+                gattHandler.onStateChange(null, BluetoothProfile.STATE_DISCONNECTED);
         } else
-            gattHandler.onStateChange(null, BluetoothProfile.STATE_DISCONNECTED);
+            Log.d(TAG, isWriting ? "occupy writing" : "occupy reading");
     }
 
     public void updateNearby(List<BluetoothDevice> devices) {
@@ -406,9 +485,9 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
     }
 
     private void updateLostMessages(List<BluetoothDevice> devices) {
-        Iterator<DeviceUnsentMessageModel> iterator = lostMessages.iterator();
+        Iterator<SendModel> iterator = lostMessages.iterator();
         while (iterator.hasNext()) {
-            DeviceUnsentMessageModel model = iterator.next();
+            SendModel model = iterator.next();
             if (!devices.contains(model.getDevice()))
                 iterator.remove();
         }
