@@ -7,7 +7,7 @@ public class LiveDataModel implements Serializable {
     public static final int NONE = 1;
     public static final int BROADCAST = 2;
     public static final int CONVERSATION = 3;
-    public static final int HISTORY = 4;
+    public static final int HOME = 4;
     public static final int CAUTION = 5;
 
     private final String title;

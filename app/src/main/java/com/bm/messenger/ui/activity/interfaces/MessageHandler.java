@@ -1,4 +1,4 @@
-package com.bm.messenger.ui.activity;
+package com.bm.messenger.ui.activity.interfaces;
 
 import com.bm.messenger.model.MessageModel;
 

@@ -22,6 +22,10 @@ public class ReadQueueModel implements Serializable {
     }
 
     public void attempted() {
-        attempt++;
+        attempt += 2;
+    }
+
+    public void dismiss() {
+        attempt--;
     }
 }

@@ -10,15 +10,15 @@
         android:layout_height="match_parent"
         android:gravity="center"
         android:layout_centerVertical="true"
-        android:textColor="@color/black"
+        android:textColor="@color/secondary_text"
         android:textSize="15sp" />
 
     <View
-        android:layout_width="0.1dp"
+        android:layout_width="1dp"
         android:layout_marginTop="4dp"
         android:layout_marginBottom="4dp"
         android:layout_height="match_parent"
         android:layout_alignParentEnd="true"
-        android:background="@color/inactive_nav_bar" />
+        android:background="@color/divider" />
 
 </RelativeLayout>

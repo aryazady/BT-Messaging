@@ -14,13 +14,13 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bm.messenger.R;
-import com.bm.messenger.adapter.ChatRecycleAdapter;
+import com.bm.messenger.adapter.ChatAdapter;
 import com.bm.messenger.database.LocalDatabase;
 import com.bm.messenger.databinding.FragmentBroadcastBinding;
 import com.bm.messenger.model.ChatModel;
 import com.bm.messenger.model.LiveDataModel;
 import com.bm.messenger.model.MessageModel;
-import com.bm.messenger.ui.activity.MessageHandler;
+import com.bm.messenger.ui.activity.interfaces.MessageHandler;
 import com.bm.messenger.ui.fragment.interfaces.BackPressHandler;
 import com.bm.messenger.utility.SharedViewModel;
 import com.bm.messenger.utility.Utility;
@@ -38,7 +38,7 @@ public class BroadcastPageFragment extends Fragment implements BackPressHandler,
 
     private final CompositeDisposable disposables = new CompositeDisposable();
     private FragmentBroadcastBinding binding;
-    private ChatRecycleAdapter mAdapter;
+    private ChatAdapter mAdapter;
     private LinearLayoutManager mLayoutManager;
     private LocalDatabase db;
     private List<ChatModel> broadcasts;
@@ -60,7 +60,7 @@ public class BroadcastPageFragment extends Fragment implements BackPressHandler,
         binding = FragmentBroadcastBinding.inflate(inflater, container, false);
         sharedViewModel = new ViewModelProvider(requireActivity()).get(SharedViewModel.class);
         mLayoutManager = new LinearLayoutManager(getActivity(), RecyclerView.VERTICAL, true);
-        mAdapter = new ChatRecycleAdapter(broadcasts, pubId);
+        mAdapter = new ChatAdapter(broadcasts, pubId);
         binding.rvBroadcast.setLayoutManager(mLayoutManager);
         binding.rvBroadcast.setAdapter(mAdapter);
         binding.ibSendMessageBroadcast.setOnClickListener(this);
@@ -78,7 +78,7 @@ public class BroadcastPageFragment extends Fragment implements BackPressHandler,
 
     @Override
     public void onBackPressed() {
-        sharedViewModel.setData(new LiveDataModel(getString(R.string.history), LiveDataModel.BROADCAST, LiveDataModel.HISTORY));
+        sharedViewModel.setData(new LiveDataModel(getString(R.string.home), LiveDataModel.BROADCAST, LiveDataModel.HOME));
     }
 
 //    @Override
@@ -109,7 +109,7 @@ public class BroadcastPageFragment extends Fragment implements BackPressHandler,
     }
 
     private void createMessage(String content) {
-        String token = Utility.generateToken(20, new Random());
+        String token = Utility.generateToken(16, new Random());
         final MessageModel message = new MessageModel(token, null, content, pubId, null, System.currentTimeMillis() / 1000);
         disposables.add(db.messageDao().insert(message)
                 .subscribeOn(Schedulers.single())
@@ -121,7 +121,7 @@ public class BroadcastPageFragment extends Fragment implements BackPressHandler,
     }
 
     private void recreateMessage(MessageModel message) {
-        String token = Utility.generateToken(20, new Random());
+        String token = Utility.generateToken(16, new Random());
         message.setId(token);
         disposables.add(db.messageDao().insert(message)
                 .subscribeOn(Schedulers.single())

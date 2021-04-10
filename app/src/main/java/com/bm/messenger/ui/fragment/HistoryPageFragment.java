@@ -58,6 +58,7 @@ public class HistoryPageFragment extends Fragment implements AdapterOnClickListe
         this.db = db;
         bluetoothManager.setNearbyFindListener(this);
         nearbyPeople.addAll(bluetoothManager.getNearby());
+        //TODO get pub id cause getting history is not right
 //        conversations = new ArrayList<>();
 //        users = new ArrayList<>();
     }
@@ -135,11 +136,11 @@ public class HistoryPageFragment extends Fragment implements AdapterOnClickListe
             historyAdapter.notifyDataSetChanged();
             if (binding.tvEmptyChat.getVisibility() == View.GONE) {
                 binding.tvEmptyChat.setVisibility(View.GONE);
-                binding.llRvHolder.setVisibility(View.VISIBLE);
+                binding.rvChatHistory.setVisibility(View.VISIBLE);
 //            binding.ivEmptyChat.setVisibility(View.GONE);
             }
         } else {
-            binding.llRvHolder.setVisibility(View.GONE);
+            binding.rvChatHistory.setVisibility(View.GONE);
             binding.tvEmptyChat.setVisibility(View.VISIBLE);
 //            binding.ivEmptyChat.setVisibility(View.VISIBLE);
         }
@@ -205,11 +206,11 @@ public class HistoryPageFragment extends Fragment implements AdapterOnClickListe
     public void onClick(int position, int view) {
         if (view == HISTORY)
             sharedViewModel.setData(new LiveDataModel(historyChat.get(position).getUser().name,
-                    LiveDataModel.HISTORY,
+                    LiveDataModel.HOME,
                     LiveDataModel.CONVERSATION, historyChat.get(position).getUser().id));
         else if (view == NEARBY)
             sharedViewModel.setData(new LiveDataModel(nearbyPeople.get(position).name,
-                    LiveDataModel.HISTORY,
+                    LiveDataModel.HOME,
                     LiveDataModel.CONVERSATION, nearbyPeople.get(position).id));
 //        sharedViewModel.setData(new LiveDataModel(pChat.get(position).getUser().name, LiveDataModel.TO_PRIVATE_CHAT));
 //        singleMessageDispose = db.messageDao().userMessageList(historyChat.get(position).getUser().id)

@@ -1,17 +1,21 @@
 <resources>
-    <string name="app_name">My Application</string>
+    <string name="app_name">BTGraph</string>
     <string name="home_button">Home Button</string>
     <string name="broadcast">Broadcast</string>
     <string name="caution">Caution</string>
     <string name="bluetooth_is_off">We use your <b>Bluetooth</b> to send and receive message.\n(Android 6+ requires Location access in order to use Bluetooth)</string>
     <string name="turn_on_bluetooth">Turn on Bluetooth</string>
-    <string name="preference_pub_id">pub_id</string>
-    <string name="empty_chat">No Chat History</string>
+    <string name="preference_user_id">user_id</string>
+    <string name="preference_user_name">user_name</string>
+    <string name="empty_chat">Empty History</string>
     <string name="message">Message</string>
     <string name="preference_bundle_data">bundle_data</string>
     <string name="error">"Error: "</string>
     <string name="history">History</string>
+    <string name="home">Home</string>
     <string name="nearby_people">Nearby People</string>
     <string name="no_one_around">no one around</string>
     <string name="enable_gps">Your GPS seems to be disabled, do you want to enable it?</string>
+    <string name="choose_name">Enter your name</string>
+    <string name="submit">submit</string>
 </resources>

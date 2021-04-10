@@ -34,7 +34,7 @@ public class NavigationManager {
     private FragmentTransaction getTransactionAnimation(int currPage, int nextPage) {
         FragmentTransaction ft = fragmentManager.beginTransaction();
         switch (currPage) {
-            case LiveDataModel.HISTORY:
+            case LiveDataModel.HOME:
                 if (nextPage == LiveDataModel.BROADCAST)
                     ft.setCustomAnimations(R.anim.slide_in_rtl, R.anim.slide_out_rtl);
                 else

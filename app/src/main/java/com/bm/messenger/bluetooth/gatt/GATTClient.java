@@ -11,26 +11,33 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
 import androidx.core.os.HandlerCompat;
 
-import com.bm.messenger.model.DeviceMessageModel;
+import com.bm.messenger.model.ExcludeDestaionModel;
 import com.bm.messenger.model.ReadQueueModel;
 import com.bm.messenger.model.SendModel;
+import com.bm.messenger.model.UserModel;
 import com.bm.messenger.utility.Utility;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class GATTClient /*extends BluetoothGattCallback*/ {
 
     private static final String TAG = "GattClient";
     private static final int CONNECTION_TIME_OUT = 6000;
-    private static final int RW_TIME_OUT = 9000000;
+    private static final int RW_TIME_OUT = 9000;
     private static final int CONNECTION_TIMED_OUT = 1863;
     private static final int RW_TIMED_OUT = 1864;
+    private static final int TERMINATE = 1865;
     private final Context mContext;
     //    private final Queue<BluetoothDevice> readQueue = new LinkedList<>();
     private final List<ReadQueueModel> readQueue = new ArrayList<>();
@@ -40,9 +47,9 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
     //    private final BluetoothManager bluetoothManager;
     //    private List<BluetoothGatt> clients = new ArrayList<>();
     private final GattHandler gattHandler;
-    private final List<BluetoothDevice> nearbyDevices = new ArrayList<>();
     private final List<SendModel> lostMessages = new ArrayList<>();
-    private final List<DeviceMessageModel> excludeDevice = new ArrayList<>();
+    private final List<ExcludeDestaionModel> excludeDevice = new ArrayList<>();
+    private Map<UserModel, BluetoothDevice> nearbyPeople;
     private List<SendModel> sendQueue = new ArrayList<>();
     private volatile boolean isReading = false;
     private volatile boolean isWriting = false;
@@ -56,8 +63,9 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
     //    private String data = "";
     private BluetoothGatt currGatt;
 
-    public GATTClient(Context context, /*BluetoothManager bluetoothManager,*/ GattHandler gattHandler) {
+    public GATTClient(Context context, Map<UserModel, BluetoothDevice> nearbyPeople, GattHandler gattHandler) {
         mContext = context;
+        this.nearbyPeople = nearbyPeople;
 //        this.bluetoothManager = bluetoothManager;
         this.gattHandler = gattHandler;
     }
@@ -76,7 +84,7 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
                         onFailed(gatt, newState);
                     }
                 } else {
-                    onFailed(gatt, newState);
+                    onFailed(gatt, status);
                 }
             }
 
@@ -101,12 +109,21 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
                             BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(GattHandler.WRITE_CHARACTERISTIC_UUID));
                             SendModel model = sendQueue.get(receiverDevice);
                             for (; ; ) {
-                                DeviceMessageModel messageModel = new DeviceMessageModel(model.getMessages().get(writeIndex), model.getDevice());
-                                if (excludeDevice.contains(messageModel)) {
-                                    excludeDevice.remove(messageModel);
+                                String message = model.getMessages().get(writeIndex);
+                                String dst = null;
+                                for (Map.Entry<UserModel, BluetoothDevice> entry : nearbyPeople.entrySet())
+                                    if (entry.getValue() == gatt.getDevice()) {
+                                        dst = entry.getKey().id;
+                                        break;
+                                    }
+//                                if (dst != null) {
+                                ExcludeDestaionModel exclude = new ExcludeDestaionModel(message, dst);
+                                if (excludeDevice.contains(exclude)) {
+                                    Log.d(TAG, "Message was excluded");
+                                    excludeDevice.remove(exclude);
                                     writeIndex++;
                                 } else {
-                                    characteristic.setValue(model.getMessages().get(writeIndex));
+                                    characteristic.setValue(message);
                                     gatt.writeCharacteristic(characteristic);
                                     break;
                                 }
@@ -116,6 +133,11 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
                                     broadcast();
                                     break;
                                 }
+//                                } else {
+//                                    characteristic.setValue(message);
+//                                    gatt.writeCharacteristic(characteristic);
+//                                    break;
+//                                }
                             }
 //                            characteristic.setValue(sendQueue.get(receiverDevice).getMessages().get(writeIndex));
 //                            if (isLostMessage) {
@@ -183,19 +205,28 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
                     } else {
                         SendModel model = sendQueue.get(receiverDevice);
                         for (; ; ) {
-                            DeviceMessageModel messageModel = new DeviceMessageModel(model.getMessages().get(writeIndex), model.getDevice());
-                            if (excludeDevice.contains(messageModel)) {
-                                excludeDevice.remove(messageModel);
-                                writeIndex++;
+                            String message = model.getMessages().get(writeIndex);
+                            String dst = getDestination(message);
+                            if (dst != null) {
+                                ExcludeDestaionModel exclude = new ExcludeDestaionModel(message, dst);
+                                if (excludeDevice.contains(exclude)) {
+                                    Log.d(TAG, "Message was excluded");
+                                    excludeDevice.remove(exclude);
+                                    writeIndex++;
+                                } else {
+                                    characteristic.setValue(message);
+                                    gatt.writeCharacteristic(characteristic);
+                                    break;
+                                }
+                                if (writeIndex >= model.getMessages().size()) {
+                                    doneWriting(status);
+                                    gatt.close();
+                                    broadcast();
+                                    break;
+                                }
                             } else {
-                                characteristic.setValue(model.getMessages().get(writeIndex));
+                                characteristic.setValue(message);
                                 gatt.writeCharacteristic(characteristic);
-                                break;
-                            }
-                            if (writeIndex >= model.getMessages().size()) {
-                                doneWriting(status);
-                                gatt.close();
-                                broadcast();
                                 break;
                             }
                         }
@@ -214,7 +245,7 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
                     gatt.discoverServices();
                 } else {
                     onFailed(gatt, status);
-                    Utility.getToast(mContext, "Can't get Max Throughput");
+                    Utility.makeToast(mContext, "Can't get Max Throughput");
                 }
             }
         }
@@ -231,20 +262,20 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
             receiverDevice++;
     }
 
-    private void onFailed(BluetoothGatt gatt, int state) {
+    private void onFailed(BluetoothGatt gatt, int status) {
         Log.d(TAG, "Failed");
 //        if (isWriting && !isFromQueue)
 //            writeQueue.add(data);
+        connectionTimeoutHandler.removeCallbacksAndMessages(null);
+        rwTimeoutHandler.removeCallbacksAndMessages(null);
         if (isReading)
             if (!fromQueue)
                 readQueue.add(new ReadQueueModel(gatt.getDevice()));
-            else if (pruneReadQueue(gatt.getDevice()))
+            else if (pruneReadQueue(gatt.getDevice(), status))
                 refreshGatt(gatt);
         fromQueue = false;
         isReading = false;
-        connectionTimeoutHandler.removeCallbacksAndMessages(null);
-        rwTimeoutHandler.removeCallbacksAndMessages(null);
-        if (state == RW_TIMED_OUT) {
+        if (status == RW_TIMED_OUT) {
             refreshGatt(gatt);
 //            nearbyDevices.remove(gatt.getDevice());
 //            gattHandler.onStateChange(gatt.getDevice(), BluetoothProfile.);
@@ -257,9 +288,16 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
             SendModel sendModel = sendQueue.get(receiverDevice);
             if (!sendModel.getMessages().isEmpty())
                 lostMessages.add(sendQueue.get(receiverDevice));
-            receiverDevice++;
-            broadcast();
-        } else
+            if (status == TERMINATE) {
+                isWriting = false;
+                sendQueue.clear();
+            } else {
+                receiverDevice++;
+                broadcast();
+            }
+        } else if (status == 133)
+            HandlerCompat.createAsync(Looper.getMainLooper()).postDelayed(this::checkQueue, 1000);
+        else if (status != TERMINATE)
             checkQueue();
     }
 
@@ -310,16 +348,33 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
     private void sendMessage() {
         isWriting = true;
         receiverDevice = 0;
-        broadcast();
-        gattHandler.onStateChange(null, BluetoothProfile.STATE_CONNECTING);
+        if (checkInclude()) {
+            broadcast();
+            gattHandler.onStateChange(null, BluetoothProfile.STATE_CONNECTING);
+        } else {
+            isWriting = false;
+            excludeDevice.clear();
+            sendQueue.clear();
+            checkQueue();
+        }
 //            connect(device);
     }
 
-    public void sendMessage(String message, BluetoothDevice excludeDevice) {
+    private boolean checkInclude() {
+        Set<String> uniqueExclude = new HashSet<>();
+        List<String> messages = new ArrayList<>();
+        for (ExcludeDestaionModel exclude : excludeDevice) {
+            uniqueExclude.add(exclude.getDestination());
+            messages.add(exclude.getMessage());
+        }
+        return uniqueExclude.size() != sendQueue.size() || messages.size() != sendQueue.get(0).getMessages().size();
+    }
+
+    public void sendMessage(String message, String excludeDestination) {
 //        nearbyDevices.clear();
 //        nearbyDevices.addAll(devices);
-        if (excludeDevice != null)
-            this.excludeDevice.add(new DeviceMessageModel(message, excludeDevice));
+        if (excludeDestination != null)
+            this.excludeDevice.add(new ExcludeDestaionModel(message, excludeDestination));
         writeQueue.add(message);
         checkQueue();
     }
@@ -377,7 +432,7 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
         Iterator<SendModel> iterator = lostMessages.iterator();
         while (iterator.hasNext()) {
             SendModel model = iterator.next();
-            if (model.getAttempt() > 2)
+            if (model.getAttempt() > 3)
                 iterator.remove();
         }
     }
@@ -389,12 +444,16 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
 //        gattHandler.onStateChange(null, BluetoothProfile.STATE_DISCONNECTED);
 //    }
 
-    private boolean pruneReadQueue(BluetoothDevice device) {
-        Iterator<ReadQueueModel> iterator = readQueue.iterator();
+    private boolean pruneReadQueue(BluetoothDevice device, int status) {
+        ListIterator<ReadQueueModel> iterator = readQueue.listIterator();
         while (iterator.hasNext()) {
             ReadQueueModel model = iterator.next();
             if (model.getDevice() == device) {
-                if (model.getAttempt() >= 5) {
+                if (status == 133) {
+                    model.dismiss();
+                    iterator.set(model);
+                    return false;
+                } else if (model.getAttempt() >= 5) {
                     iterator.remove();
                     gattHandler.onStateChange(device, BluetoothProfile.STATE_DISCONNECTED);
                     return true;
@@ -408,7 +467,7 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
     public void terminate() {
         if (currGatt == null)
             return;
-        currGatt.close();
+        onFailed(currGatt, TERMINATE);
         currGatt = null;
     }
 
@@ -426,11 +485,10 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
     private void checkQueue() {
         Log.d(TAG, "Checking Queue. Write: " + writeQueue.size() + " Read: " + readQueue.size() + " Lost Msg: " + lostMessages.size());
         if (!isReading && !isWriting) {
-            if (!readQueue.isEmpty() && nearbyDevices.size() <= 4) {
+            if (!readQueue.isEmpty() && nearbyPeople.size() <= 4) {
                 fromQueue = true;
                 getUserData(readQueue.get(0));
             } else if (!lostMessages.isEmpty()) {
-//                isLostMessage = true;
                 for (SendModel model : lostMessages) {
                     model.addMessage(new ArrayList<>(writeQueue));
                     model.attempted();
@@ -438,23 +496,73 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
                 }
                 lostMessages.clear();
                 if (!writeQueue.isEmpty()) {
-                    for (BluetoothDevice device : nearbyDevices) {
-                        boolean contain = false;
-                        for (SendModel model : sendQueue)
-                            if (device == model.getDevice()) {
-                                contain = true;
-                                break;
+                    List<SendModel> sendModels = new ArrayList<>();
+                    Iterator<String> iterator = writeQueue.iterator();
+                    while (iterator.hasNext()) {
+                        String message = iterator.next();
+                        String dst = getDestination(message);
+                        if (dst != null) {
+                            UserModel user = new UserModel(dst, "");
+                            SendModel knownDst = new SendModel(nearbyPeople.get(user));
+                            if (nearbyPeople.containsKey(user)) {
+                                Log.d(TAG, "Message has known dst");
+                                int index = sendModels.indexOf(knownDst);
+                                if (index >= 0)
+                                    sendModels.get(index).addMessage(message);
+                                else {
+                                    knownDst.addMessage(message);
+                                    sendModels.add(knownDst);
+                                }
+                                iterator.remove();
                             }
-                        if (!contain)
-                            sendQueue.add(new SendModel(device, new ArrayList<>(writeQueue)));
+                        }
                     }
-                    writeQueue.clear();
+                    if (!sendModels.isEmpty())
+                        sendQueue.addAll(sendModels);
+                    if (!writeQueue.isEmpty()) {
+                        for (BluetoothDevice device : nearbyPeople.values()) {
+                            boolean contain = false;
+                            for (SendModel model : sendQueue)
+                                if (device == model.getDevice()) {
+                                    contain = true;
+                                    break;
+                                }
+                            if (!contain)
+                                sendQueue.add(new SendModel(device, new ArrayList<>(writeQueue)));
+                        }
+                        writeQueue.clear();
+                    }
                 }
                 sendMessage();
             } else if (!writeQueue.isEmpty()) {
-                for (BluetoothDevice device : nearbyDevices)
-                    sendQueue.add(new SendModel(device, new ArrayList<>(writeQueue)));
-                writeQueue.clear();
+                List<SendModel> sendModels = new ArrayList<>();
+                Iterator<String> iterator = writeQueue.iterator();
+                while (iterator.hasNext()) {
+                    String message = iterator.next();
+                    String dst = getDestination(message);
+                    if (dst != null) {
+                        UserModel user = new UserModel(dst, "");
+                        SendModel knownDst = new SendModel(nearbyPeople.get(user));
+                        if (nearbyPeople.containsKey(user)) {
+                            Log.d(TAG, "Message has known dst");
+                            int index = sendModels.indexOf(knownDst);
+                            if (index >= 0)
+                                sendModels.get(index).addMessage(message);
+                            else {
+                                knownDst.addMessage(message);
+                                sendModels.add(knownDst);
+                            }
+                            iterator.remove();
+                        }
+                    }
+                }
+                if (!sendModels.isEmpty())
+                    sendQueue.addAll(sendModels);
+                if (!writeQueue.isEmpty()) {
+                    for (BluetoothDevice device : nearbyPeople.values())
+                        sendQueue.add(new SendModel(device, new ArrayList<>(writeQueue)));
+                    writeQueue.clear();
+                }
                 sendMessage();
             } else
                 gattHandler.onStateChange(null, BluetoothProfile.STATE_DISCONNECTED);
@@ -462,10 +570,17 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
             Log.d(TAG, isWriting ? "occupy writing" : "occupy reading");
     }
 
-    public void updateNearby(List<BluetoothDevice> devices) {
-        nearbyDevices.clear();
-        nearbyDevices.addAll(devices);
-        if (!devices.isEmpty()) {
+    @Nullable
+    private String getDestination(String message) {
+        String[] data = message.split("\\$");
+        if (data.length == 5)
+            return data[2];
+        return null;
+    }
+
+    public void updateNearby() {
+        if (!nearbyPeople.isEmpty()) {
+            List<BluetoothDevice> devices = new ArrayList<>(nearbyPeople.values());
             updateReadQueue(devices);
             updateLostMessages(devices);
             checkQueue();

@@ -29,13 +29,12 @@ public class UserModel implements Serializable {
 //        if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         UserModel userModel = (UserModel) o;
-        return id.equals(userModel.id) &&
-                name.equals(userModel.name);
+        return id.equals(userModel.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name);
+        return Objects.hash(id);
     }
 
     @Override

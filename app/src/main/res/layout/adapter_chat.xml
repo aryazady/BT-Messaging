@@ -19,7 +19,7 @@
             android:id="@+id/tv_name_adapter"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:textColor="@color/name"
+            android:textColor="@color/primary_text"
             android:textSize="12sp"
             android:visibility="gone" />
 
@@ -27,7 +27,7 @@
             android:id="@+id/tv_message_adapter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/white"
+            android:textColor="@color/secondary_text"
             android:textSize="14sp" />
     </LinearLayout>
 

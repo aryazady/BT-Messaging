@@ -42,7 +42,7 @@ public class NavBarFragment extends Fragment implements View.OnClickListener {
         binding = FragmentNavBarBinding.inflate(inflater, container, false);
         sharedViewModel = new ViewModelProvider(requireActivity()).get(SharedViewModel.class);
         sharedViewModel.getData().observe(getViewLifecycleOwner(), this::handleLiveData);
-        currPage = LiveDataModel.HISTORY;
+        currPage = LiveDataModel.HOME;
         binding.navBarIcGroup.setImageDrawable(getInactiveIcon(R.drawable.ic_broadcast));
         binding.navBarIcHome.setImageDrawable(getActiveIcon(R.drawable.ic_chats));
         binding.navBarIcHome.setOnClickListener(this);
@@ -63,19 +63,19 @@ public class NavBarFragment extends Fragment implements View.OnClickListener {
 
     private Drawable getInactiveIcon(int id) {
         VectorDrawable icGroup = (VectorDrawable) ContextCompat.getDrawable(getContext(), id);
-        icGroup.setTint(getResources().getColor(R.color.inactive_nav_bar, null));
+        icGroup.setTint(getResources().getColor(R.color.inactive_btn, null));
         return icGroup;
     }
 
     private Drawable getActiveIcon(int drawableID) {
         VectorDrawable icGroup = (VectorDrawable) ContextCompat.getDrawable(getContext(), drawableID);
-        icGroup.setTint(getResources().getColor(R.color.active_nav_bar, null));
+        icGroup.setTint(getResources().getColor(R.color.active, null));
         return icGroup;
     }
 
     public void changePage(int page) {
-        if (page == LiveDataModel.HISTORY) {
-            this.currPage = LiveDataModel.HISTORY;
+        if (page == LiveDataModel.HOME) {
+            this.currPage = LiveDataModel.HOME;
             binding.navBarIcHome.setImageDrawable(getActiveIcon(R.drawable.ic_chats));
             binding.navBarIcGroup.setImageDrawable(getInactiveIcon(R.drawable.ic_broadcast));
         } else if (page == LiveDataModel.BROADCAST) {
@@ -91,14 +91,14 @@ public class NavBarFragment extends Fragment implements View.OnClickListener {
         switch (v.getId()) {
             case R.id.nav_bar_ic_home:
                 if (currPage == LiveDataModel.BROADCAST) {
-                    changePage(LiveDataModel.HISTORY);
-                    sharedViewModel.setData(new LiveDataModel(getString(R.string.history), LiveDataModel.BROADCAST, LiveDataModel.HISTORY));
+                    changePage(LiveDataModel.HOME);
+                    sharedViewModel.setData(new LiveDataModel(getString(R.string.home), LiveDataModel.BROADCAST, LiveDataModel.HOME));
                 }
                 break;
             case R.id.nav_bar_ic_group:
-                if (currPage == LiveDataModel.HISTORY) {
+                if (currPage == LiveDataModel.HOME) {
                     changePage(LiveDataModel.BROADCAST);
-                    sharedViewModel.setData(new LiveDataModel(getString(R.string.broadcast), LiveDataModel.HISTORY, LiveDataModel.BROADCAST));
+                    sharedViewModel.setData(new LiveDataModel(getString(R.string.broadcast), LiveDataModel.HOME, LiveDataModel.BROADCAST));
                 }
                 break;
         }

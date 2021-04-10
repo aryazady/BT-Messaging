@@ -70,8 +70,20 @@ public class BluetoothManager extends ScanCallback {
             Log.d(TAG, "Advertising Failed");
             isAdvertising = false;
             terminate(BluetoothProfile.GATT_SERVER);
-            if (errorCode == ADVERTISE_FAILED_DATA_TOO_LARGE)
-                Utility.getToast(mContext, "Long Bluetooth Name");
+            switch (errorCode) {
+                case ADVERTISE_FAILED_DATA_TOO_LARGE:
+                    Utility.makeToast(mContext, "BT Discovery Failed: " + "Large Data");
+                    break;
+                case ADVERTISE_FAILED_TOO_MANY_ADVERTISERS:
+                    Utility.makeToast(mContext, "BT Discovery Failed: " + "No Resource Available");
+                    break;
+                case ADVERTISE_FAILED_INTERNAL_ERROR:
+                    Utility.makeToast(mContext, "BT Discovery Failed: " + "Internal Error");
+                    break;
+                case ADVERTISE_FAILED_FEATURE_UNSUPPORTED:
+                    Utility.makeToast(mContext, "BT Discovery Failed: " + "Unsupported");
+                    break;
+            }
         }
     };
     //    private final BluetoothGattCallback gattCallback = new BluetoothGattCallback() {
@@ -92,7 +104,6 @@ public class BluetoothManager extends ScanCallback {
                 switch (state) {
                     case BluetoothAdapter.STATE_ON:
                         startAdvertising();
-                        gattManager.init();
                         break;
                     case BluetoothAdapter.STATE_TURNING_OFF:
                         stopAdvertising();
@@ -108,8 +119,6 @@ public class BluetoothManager extends ScanCallback {
         bluetoothAdapter = bluetoothManager.getAdapter();
 //        socketHandler = new SocketHandler(mContext, bluetoothAdapter);
         gattManager = new GATTManager(mContext, this /*bluetoothManager,*/);
-        if (bluetoothAdapter.isEnabled())
-            gattManager.init();
     }
 
     public BroadcastReceiver getBluetoothReceiver() {
@@ -130,6 +139,7 @@ public class BluetoothManager extends ScanCallback {
 
     public void startAdvertising() {
         if (bluetoothAdapter.isEnabled() && !isAdvertising) {
+            gattManager.init();
             try {
                 advertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
                 AdvertiseSettings settings = new AdvertiseSettings.Builder()
@@ -144,7 +154,7 @@ public class BluetoothManager extends ScanCallback {
                         .build();
                 advertiser.startAdvertising(settings, data, advertiseCallback);
             } catch (Exception e) {
-                Utility.getToast(mContext, "Failed to Enable Bluetooth Discovery");
+                Utility.makeToast(mContext, "Failed to Enable Bluetooth Discovery");
             }
         }
     }
@@ -294,7 +304,7 @@ public class BluetoothManager extends ScanCallback {
     @Override
     public void onScanFailed(int errorCode) {
         super.onScanFailed(errorCode);
-        Utility.getToast(mContext, "Bluetooth Scan Failed");
+        Utility.makeToast(mContext, "Bluetooth Scan Failed");
     }
 
     @Override

@@ -18,12 +18,12 @@ import com.bm.messenger.model.ChatModel;
 
 import java.util.List;
 
-public class ChatRecycleAdapter extends RecyclerView.Adapter<ChatRecycleAdapter.ViewHolder> {
+public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
 
     private final List<ChatModel> dataSet;
     private final String myPubId;
 
-    public ChatRecycleAdapter(List<ChatModel> dataSet, String myPubId) {
+    public ChatAdapter(List<ChatModel> dataSet, String myPubId) {
         this.dataSet = dataSet;
         this.myPubId = myPubId;
     }
@@ -51,7 +51,7 @@ public class ChatRecycleAdapter extends RecyclerView.Adapter<ChatRecycleAdapter.
         else if (position == dataSet.size() - 1)
             layoutParams.topMargin = dpToPixel(resources, 8);
         int chatNum = dataSet.size() - position - 1;
-        if (dataSet.get(chatNum).getMessage().dst == null) {
+        if (dataSet.get(chatNum).getMessage().dst == null && !dataSet.get(chatNum).getMessage().src.equals(myPubId)) {
             holder.getName().setVisibility(View.VISIBLE);
             holder.getBg().setPadding(dpToPixel(resources, 10), dpToPixel(resources, 4), dpToPixel(resources, 12), dpToPixel(resources, 6));
         }

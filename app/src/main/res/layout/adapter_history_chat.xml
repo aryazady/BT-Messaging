@@ -20,7 +20,7 @@
             android:id="@+id/tv_pv_name_adapter"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/black"
+            android:textColor="@color/secondary_text"
             android:textSize="17sp"
             android:textStyle="bold" />
 
@@ -30,13 +30,13 @@
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
             android:lines="1"
-            android:textColor="@color/black"
+            android:textColor="@color/secondary_text"
             android:textSize="12sp" />
     </RelativeLayout>
 
     <View
         android:layout_width="match_parent"
-        android:layout_height="0.1dp"
-        android:background="@color/inactive_nav_bar" />
+        android:layout_height="1dp"
+        android:background="@color/divider" />
 
 </LinearLayout>

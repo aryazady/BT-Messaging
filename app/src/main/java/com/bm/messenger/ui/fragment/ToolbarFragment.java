@@ -38,7 +38,7 @@ public class ToolbarFragment extends Fragment {
         model.getData().observe(getViewLifecycleOwner(), data -> {
             switch (data.getNextPage()) {
                 case LiveDataModel.BROADCAST:
-                case LiveDataModel.HISTORY:
+                case LiveDataModel.HOME:
                     binding.ivBack.setVisibility(View.GONE);
                     binding.toolbarTitle.setText(data.getTitle());
                     break;

@@ -127,8 +127,10 @@ public class GATTManager implements GattHandler {
         BTDeviceModel deviceModel = new BTDeviceModel(device);
         if (!bluetoothDevices.contains(deviceModel)) {
             Log.d(TAG, "Device added: " + device.getAddress());
-            bluetoothDevices.add(new BTDeviceModel(device, true));
-            client.getUserData(new ReadQueueModel(device));
+            if (client != null) {
+                bluetoothDevices.add(new BTDeviceModel(device, true));
+                client.getUserData(new ReadQueueModel(device));
+            }
         } else
             bluetoothDevices.get(bluetoothDevices.indexOf(deviceModel)).setAround(true);
 //            if (!server.addClient(device))
@@ -153,7 +155,7 @@ public class GATTManager implements GattHandler {
 
     private void initClient() {
         if (client == null)
-            client = new GATTClient(mContext, /*bluetoothManager,*/ this);
+            client = new GATTClient(mContext, nearbyPeople,this);
     }
 
     private void initServer() {
@@ -161,11 +163,11 @@ public class GATTManager implements GattHandler {
             BluetoothManager bluetoothManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
             server = new GATTServer(mContext, bluetoothManager, this);
             if (!service.addCharacteristic(writeCharacteristic))
-                Utility.getToast(mContext, "Can't Add WRITE to Host");
+                Utility.makeToast(mContext, "Can't Add WRITE to Host");
             if (!service.addCharacteristic(readCharacteristic))
-                Utility.getToast(mContext, "Can't Add READ to Host");
+                Utility.makeToast(mContext, "Can't Add READ to Host");
             if (!server.addService(service))
-                Utility.getToast(mContext, "Can't Add Service to Host");
+                Utility.makeToast(mContext, "Can't Add Service to Host");
         }
     }
 
@@ -176,12 +178,16 @@ public class GATTManager implements GattHandler {
     }
 
     public void terminateClient() {
+        if (client == null)
+            return;
         clearList();
         client.terminate();
         client = null;
     }
 
     public void terminateServer() {
+        if (server == null)
+            return;
         server.terminate();
         server = null;
     }
@@ -191,13 +197,13 @@ public class GATTManager implements GattHandler {
 
     }
 
-    public void sendMessage(String message, BluetoothDevice excludeDevice) {
+    public void sendMessage(String message, String excludeDestination) {
         if (nearbyPeople.size() == 0) {
             if (bluetoothDevices.size() > 0 && !(client.isReading() || isFetching))
                 bluetoothDevices.clear();
             unsentMessage.add(message);
         } else
-            client.sendMessage(message, excludeDevice);
+            client.sendMessage(message, excludeDestination);
     }
 
 //    private void Sync(BluetoothDevice device) {
@@ -265,7 +271,7 @@ public class GATTManager implements GattHandler {
     }
 
     private void notifyGattChange() {
-        client.updateNearby(new ArrayList<>(nearbyPeople.values()));
+        client.updateNearby();
         if (!nearbyPeople.isEmpty()) {
             if (unsentMessage.size() > 0) {
                 client.sendMessage(unsentMessage);
@@ -335,7 +341,7 @@ public class GATTManager implements GattHandler {
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(l -> {
                         if (!(data.length == 5 && data[2].equals(currentUser.id)))
-                            sendMessage(message, device);
+                            sendMessage(message, currentUser.id);
                     }, throwable -> {
                     }));
             return messageModel.dst != null && messageModel.dst.equals(currentUser.id);

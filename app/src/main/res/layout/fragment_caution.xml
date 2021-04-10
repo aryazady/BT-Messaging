@@ -15,7 +15,7 @@
         android:gravity="center"
         android:layout_marginBottom="36dp"
         android:text="@string/bluetooth_is_off"
-        android:textColor="@color/caution_text"
+        android:textColor="@color/secondary_text"
         android:textSize="16sp" />
 
     <RelativeLayout
@@ -28,10 +28,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
-            android:background="@color/design_default_color_primary_dark"
+            android:background="@color/primary"
             android:padding="8dp"
             android:text="@string/turn_on_bluetooth"
-            android:textColor="@color/white" />
+            android:textColor="@color/primary_text" />
 
         <ProgressBar
             android:id="@+id/pb_turn_on_bluetooth"

@@ -33,7 +33,7 @@ public final class Utility {
     public static String generateToken(int length, Random random) {
         char[] buf = new char[length];
         for (int i = 0; i < length; i++) {
-            switch (random.nextInt(7)) {
+            switch (i == 0 ? random.nextInt(6) : random.nextInt(7)) {
                 case 0:
                 case 1:
                 case 2:
@@ -64,7 +64,7 @@ public final class Utility {
         return true;
     }
 
-    public static void getToast(Context context, String message) {
+    public static void makeToast(Context context, String message) {
         Toast.makeText(context, context.getResources().getString(R.string.error) + message, Toast.LENGTH_LONG).show();
     }
 }

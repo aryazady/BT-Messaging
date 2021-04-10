@@ -63,7 +63,7 @@ public class CautionPageFragment extends Fragment implements View.OnClickListene
                 binding.btnTurnOnBluetooth.setVisibility(View.VISIBLE);
                 binding.pbTurnOnBluetooth.setVisibility(View.GONE);
             } else {
-                sharedViewModel.setData(new LiveDataModel(getString(R.string.history), LiveDataModel.CAUTION, LiveDataModel.HISTORY));
+                sharedViewModel.setData(new LiveDataModel(getString(R.string.home), LiveDataModel.CAUTION, LiveDataModel.HOME));
             }
         });
     }

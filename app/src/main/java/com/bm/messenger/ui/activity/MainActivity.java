@@ -6,7 +6,6 @@ import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Build;
@@ -32,6 +31,7 @@ import com.bm.messenger.databinding.ActivityMainBinding;
 import com.bm.messenger.model.LiveDataModel;
 import com.bm.messenger.model.MessageModel;
 import com.bm.messenger.model.UserModel;
+import com.bm.messenger.ui.activity.interfaces.MessageHandler;
 import com.bm.messenger.ui.fragment.BroadcastPageFragment;
 import com.bm.messenger.ui.fragment.CautionPageFragment;
 import com.bm.messenger.ui.fragment.ConversationFragment;
@@ -43,7 +43,6 @@ import com.bm.messenger.utility.SharedViewModel;
 import com.bm.messenger.utility.Utility;
 
 import java.util.List;
-import java.util.Random;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
@@ -125,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
     public void onBackPressed() {
         List<Fragment> fragmentList = getSupportFragmentManager().getFragments();
         if (liveDataModel == null ||
-                liveDataModel.getCurrPage() == LiveDataModel.HISTORY ||
+                liveDataModel.getCurrPage() == LiveDataModel.HOME ||
                 liveDataModel.getCurrPage() == LiveDataModel.CAUTION)
             super.onBackPressed();
         for (Fragment fragment : fragmentList)
@@ -140,8 +139,8 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
 
     private void init() {
         initVar();
-        checkPubId();
-        doTestHere();
+        getPubId();
+//        doTestHere();
         checkBluetooth();
 //        initNavBar();
         if (bluetoothManager.getAdapter() != null) {
@@ -219,6 +218,13 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
 //        random = new Random();
     }
 
+    private void getPubId() {
+        String pubId = Utility.getSharedPreferences(this).getString(getString(R.string.preference_user_id), null);
+        if (pubId == null)
+            Utility.makeToast(this, "No User Found");
+        this.pubId = pubId;
+    }
+
     private void registerBluetoothReceiver() {
         IntentFilter bluetoothChange = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
         registerReceiver(bluetoothManager.getBluetoothReceiver(), bluetoothChange);
@@ -238,7 +244,7 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
 
     private void checkBluetooth() {
         if (bluetoothManager.getAdapter() == null) {
-            Utility.getToast(this, "Your Phone Doesn't Support Bluetooth. Delete This App");
+            Utility.makeToast(this, "Your Phone Doesn't Support Bluetooth. Delete This App");
             finishAndRemoveTask();
         } else {
 //            Bridgefy.initialize(getApplicationContext(), new RegistrationListener() {
@@ -293,21 +299,13 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
 //            initNavBar();
     }
 
-    private void checkPubId() {
-        String pubId = Utility.getSharedPreferences(this).getString(getString(R.string.preference_pub_id), null);
-        if (pubId == null)
-            generatePubId();
-        else
-            this.pubId = pubId;
-    }
-
     private void handleLiveData(LiveDataModel data) {
         liveDataModel = data;
         if (binding.fragmentBottomBar.getVisibility() != View.VISIBLE && liveDataModel.getNextPage() != LiveDataModel.NONE)
             binding.fragmentBottomBar.setVisibility(View.VISIBLE);
         switch (liveDataModel.getNextPage()) {
             case LiveDataModel.BROADCAST:
-            case LiveDataModel.HISTORY:
+            case LiveDataModel.HOME:
 //                bluetoothManager.startAdvertising();
 //                getSupportFragmentManager().popBackStack();
                 selectPage();
@@ -325,7 +323,7 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
     private void selectPage() {
 //        if (isAnimated == WITH_TRANSACTION) {
         switch (liveDataModel.getNextPage()) {
-            case LiveDataModel.HISTORY:
+            case LiveDataModel.HOME:
                 navigationManager.fragmentTransaction(R.id.fragment_container,
                         new HistoryPageFragment(db.getDatabase(getApplicationContext()), bluetoothManager),
                         liveDataModel);
@@ -361,14 +359,6 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
 //        else
 //            navigationManager.fragmentTransaction(R.id.fragment_bottom_bar, new TypeAreaFragment(), null);
 //    }
-
-    private void generatePubId() {
-        String pubId = Utility.generateToken(24, new Random());
-        SharedPreferences.Editor editor = Utility.getSharedPreferences(this).edit();
-        editor.putString(getString(R.string.preference_pub_id), "1");
-        editor.apply();
-        this.pubId = pubId;
-    }
 
     private void locationStatusCheck() {
         final LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
