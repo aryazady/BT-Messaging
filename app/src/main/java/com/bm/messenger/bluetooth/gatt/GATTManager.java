@@ -331,16 +331,16 @@ public class GATTManager implements GattHandler {
     public boolean onMessageReceive(BluetoothDevice device, String message) {
         final String[] data = message.split("\\$");
         MessageModel messageModel = null;
-        if (data.length == 5) {
-            messageModel = new MessageModel(data[0], data[2], data[3], data[1], data[2], Long.parseLong(data[4]));
+        if (data.length == 6) {
+            messageModel = new MessageModel(data[0], data[1], data[2], data[3], data[4], Long.parseLong(data[5]));
         } else if (data.length == 4)
-            messageModel = new MessageModel(data[0], null, data[2], data[1], null, Long.parseLong(data[3]));
+            messageModel = new MessageModel(data[0], null, data[1], data[2], null, Long.parseLong(data[3]));
         if (messageModel != null) {
             disposables.add(db.getDatabase(mContext).messageDao().insert(messageModel)
                     .subscribeOn(Schedulers.single())
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(l -> {
-                        if (!(data.length == 5 && data[2].equals(currentUser.id)))
+                        if (!(data.length == 6 && data[4].equals(currentUser.id)))
                             sendMessage(message, currentUser.id);
                     }, throwable -> {
                     }));

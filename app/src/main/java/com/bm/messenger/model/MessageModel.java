@@ -39,19 +39,23 @@ public class MessageModel implements Serializable {
 
     public MessageModel(@NonNull String id, String conversationId, @NonNull String content, @NonNull String src, @Nullable String dst, long date) {
         this.id = id;
-        this.content = content;
         this.conversationId = conversationId;
+        this.content = content;
         this.src = src;
         this.dst = dst;
         this.date = date;
     }
 
+    public void setConversationId(String conversationId) {
+        this.conversationId = conversationId;
+    }
+
     @Override
     public String toString() {
         if (dst == null)
-            return id + "$" + src + "$" + content + "$" + date;
+            return id + "$" + content + "$" + src + "$" + date;
         else
-            return id + "$" + src + "$" + dst + "$" + content + "$" + date;
+            return id + "$" + conversationId + "$" + content + "$" + src + "$" + dst + "$" + date;
 
     }
 

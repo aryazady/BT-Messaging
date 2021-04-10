@@ -58,7 +58,6 @@ public class HistoryPageFragment extends Fragment implements AdapterOnClickListe
         this.db = db;
         bluetoothManager.setNearbyFindListener(this);
         nearbyPeople.addAll(bluetoothManager.getNearby());
-        //TODO get pub id cause getting history is not right
 //        conversations = new ArrayList<>();
 //        users = new ArrayList<>();
     }

@@ -573,8 +573,8 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
     @Nullable
     private String getDestination(String message) {
         String[] data = message.split("\\$");
-        if (data.length == 5)
-            return data[2];
+        if (data.length == 6)
+            return data[4];
         return null;
     }
 

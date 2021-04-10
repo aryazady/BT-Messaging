@@ -86,10 +86,10 @@ public class ConversationFragment extends Fragment implements BackPressHandler, 
     }
 
     private void handleLiveData(LiveDataModel data) {
-            if (data.getNextPage() == LiveDataModel.CONVERSATION) {
-                conversationId = data.getData()[0];
-                getConversationChats(conversationId);
-            }
+        if (data.getNextPage() == LiveDataModel.CONVERSATION) {
+            conversationId = data.getData()[0];
+            getConversationChats(conversationId);
+        }
     }
 
     private void getConversationChats(String conversationId) {
@@ -109,7 +109,10 @@ public class ConversationFragment extends Fragment implements BackPressHandler, 
         disposables.add(db.messageDao().insert(message)
                 .subscribeOn(Schedulers.single())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(res -> messageHandler.onMessageSent(message), throwable -> {
+                .subscribe(res -> {
+                    message.setConversationId(pubId);
+                    messageHandler.onMessageSent(message);
+                }, throwable -> {
                     if (throwable instanceof SQLiteConstraintException)
                         recreateMessage(message);
                 }));
