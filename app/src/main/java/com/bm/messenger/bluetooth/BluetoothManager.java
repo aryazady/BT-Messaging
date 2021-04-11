@@ -33,7 +33,7 @@ public class BluetoothManager extends ScanCallback {
 
     private static final String TAG = "BTManager";
     private static final long SCAN_PERIOD = 3000;
-    private static final String ADVERTISE_UUID = "4f000566-8bfe-11eb-8dcd-0242ac130003";
+    private static final String ADVERTISE_UUID = "802ceca0-3af2-41b8-b6f9-fa7e1a794193";
     private static final int GATT_AND_GATT_SERVER = -1;
     private final ScanFilter scanFilter = new ScanFilter.Builder()
             .setServiceUuid(ParcelUuid.fromString(ADVERTISE_UUID))
@@ -154,6 +154,10 @@ public class BluetoothManager extends ScanCallback {
                         .build();
                 advertiser.startAdvertising(settings, data, advertiseCallback);
             } catch (Exception e) {
+                e.printStackTrace();
+                if (advertiser == null) {
+                    Utility.makeToast(mContext, "Your Phone cannot Advertise!");
+                }
                 Utility.makeToast(mContext, "Failed to Enable Bluetooth Discovery");
             }
         }

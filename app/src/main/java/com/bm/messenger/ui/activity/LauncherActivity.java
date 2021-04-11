@@ -118,7 +118,11 @@ public class LauncherActivity extends AppCompatActivity implements View.OnClickL
         disposable = db.getDatabase(getApplicationContext()).userDao().insert(userModel)
                 .subscribeOn(Schedulers.single())
                 .observeOn(Schedulers.single())
-                .subscribe(longs -> startMainActivity(), Throwable::printStackTrace);
+                .subscribe(longs -> startMainActivity(), throwable -> {
+                    Utility.makeToast(this, throwable.toString());
+                    binding.pbLoading.setVisibility(View.GONE);
+                    binding.btSubmit.setVisibility(View.VISIBLE);
+                });
     }
 
     @Override
@@ -128,6 +132,8 @@ public class LauncherActivity extends AppCompatActivity implements View.OnClickL
             if (name.matches(""))
                 Utility.makeToast(this, "Name cannot be empty");
             else {
+                binding.btSubmit.setVisibility(View.GONE);
+                binding.pbLoading.setVisibility(View.VISIBLE);
                 SharedPreferences.Editor editor = Utility.getSharedPreferences(this).edit();
                 editor.putString(getString(R.string.preference_user_name), name);
                 editor.apply();

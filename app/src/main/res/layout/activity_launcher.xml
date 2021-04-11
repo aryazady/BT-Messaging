@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:focusable="true"
-    android:focusableInTouchMode="true"
-    android:layout_height="match_parent">
+    android:focusableInTouchMode="true">
 
     <ScrollView
         android:layout_width="match_parent"
@@ -21,13 +21,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="24dp"
+                android:layout_marginTop="32dp"
                 android:layout_marginEnd="24dp"
                 android:backgroundTint="@color/primary_dark"
                 android:gravity="center"
                 android:hint="@string/choose_name"
                 android:importantForAutofill="no"
                 android:inputType="text"
-                android:layout_marginTop="32dp"
                 android:maxLength="16"
                 android:padding="16dp"
                 android:textColorHint="@color/primary"
@@ -41,6 +41,13 @@
                 android:background="@color/primary"
                 android:text="@string/submit"
                 android:textColor="@color/primary_text" />
+
+            <ProgressBar
+                android:id="@+id/pb_loading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
         </LinearLayout>
 
     </ScrollView>
@@ -50,7 +57,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/primary_dark"
-        android:src="@drawable/ic_splash" />
+        android:src="@drawable/ic_splash"
+        android:contentDescription="@string/launch_splash" />
 
 
 </RelativeLayout>

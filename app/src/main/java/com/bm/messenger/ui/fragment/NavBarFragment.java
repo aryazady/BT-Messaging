@@ -3,6 +3,7 @@ package com.bm.messenger.ui.fragment;
 import android.annotation.SuppressLint;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.VectorDrawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -64,13 +65,17 @@ public class NavBarFragment extends Fragment implements View.OnClickListener {
 
     private Drawable getInactiveIcon(int id) {
         VectorDrawable icGroup = (VectorDrawable) ContextCompat.getDrawable(getContext(), id);
-        icGroup.setTint(getResources().getColor(R.color.inactive_btn, null));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            icGroup.setTint(getResources().getColor(R.color.inactive_btn, null));
+        }
         return icGroup;
     }
 
     private Drawable getActiveIcon(int drawableID) {
         VectorDrawable icGroup = (VectorDrawable) ContextCompat.getDrawable(getContext(), drawableID);
-        icGroup.setTint(getResources().getColor(R.color.active, null));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            icGroup.setTint(getResources().getColor(R.color.active, null));
+        }
         return icGroup;
     }
 

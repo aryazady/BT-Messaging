@@ -1,7 +1,6 @@
 package com.bm.messenger.ui.activity;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
@@ -30,7 +29,6 @@ import com.bm.messenger.database.Database;
 import com.bm.messenger.databinding.ActivityMainBinding;
 import com.bm.messenger.model.LiveDataModel;
 import com.bm.messenger.model.MessageModel;
-import com.bm.messenger.model.UserModel;
 import com.bm.messenger.ui.activity.interfaces.MessageHandler;
 import com.bm.messenger.ui.fragment.BroadcastPageFragment;
 import com.bm.messenger.ui.fragment.CautionPageFragment;
@@ -43,9 +41,6 @@ import com.bm.messenger.utility.SharedViewModel;
 import com.bm.messenger.utility.Utility;
 
 import java.util.List;
-
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.schedulers.Schedulers;
 
 //import com.bm.messenger.ui.fragment.TypeAreaFragment;
 
@@ -141,7 +136,7 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
         initVar();
         getPubId();
 //        doTestHere();
-        checkBluetooth();
+        checkBluetoothAdapter();
 //        initNavBar();
         if (bluetoothManager.getAdapter() != null) {
             if (!Utility.checkPermission(getBaseContext()))
@@ -152,58 +147,58 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
         }
     }
 
-    @SuppressLint("all")
-    private void doTestHere() {
-        db.getDatabase(getApplicationContext()).userDao()
-                .insert(new UserModel("1", "Arya"),
-                        new UserModel("3", "Sam"),
-                        new UserModel("4", "Jack"),
-                        new UserModel("5", "Sarah"),
-                        new UserModel("6", "Jennifer"),
-                        new UserModel("2", "Tom"))
-                .subscribeOn(Schedulers.single())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(l -> l.size(), Throwable::printStackTrace);
-//        Date date = new Date(System.currentTimeMillis());
-//        Calendar.getInstance().get(Calendar.)
-//        LocalDateTime a = LocalDateTime.now();
-//        a.get
-        long timestamp = System.currentTimeMillis() / 1000;
-        db.getDatabase(getApplicationContext()).messageDao()
-                .insert(new MessageModel("100", "2", "content1", "2", "1", timestamp++),
-                        new MessageModel("102", "2", "content2", "2", "1", timestamp++),
-                        new MessageModel("103", "2", "content3", "2", "1", timestamp++),
-                        new MessageModel("104", "2", "content4", "1", "2", timestamp++),
-                        new MessageModel("105", "3", "content5", "1", "3", timestamp++),
-                        new MessageModel("106", "3", "content6", "3", "1", timestamp++),
-                        new MessageModel("107", "3", "content7", "3", "1", timestamp++),
-                        new MessageModel("108", "3", "content8", "1", "3", timestamp++),
-                        new MessageModel("109", "3", "content9", "3", "1", timestamp++),
-                        new MessageModel("110", "3", "content10", "3", "1", timestamp++),
-                        new MessageModel("111", "3", "content11", "1", "3", timestamp++),
-                        new MessageModel("112", "4", "content12", "4", "1", timestamp++),
-                        new MessageModel("113", "4", "content13", "1", "4", timestamp++),
-                        new MessageModel("114", "4", "content14", "4", "1", timestamp++),
-                        new MessageModel("115", "5", "content15", "5", "1", timestamp++),
-                        new MessageModel("116", "5", "content16", "5", "1", timestamp++),
-                        new MessageModel("117", "5", "content17", "5", "1", timestamp++),
-                        new MessageModel("118", "6", "content18", "6", "1", timestamp++),
-                        new MessageModel("119", "6", "content19", "6", "1", timestamp++),
-                        new MessageModel("120", "6", "content20", "6", "1", timestamp++),
-                        new MessageModel("121", null, "Broadcast1", "6", null, timestamp++),
-                        new MessageModel("122", null, "Broadcast2", "6", null, timestamp++),
-                        new MessageModel("123", null, "Broadcast3", "6", null, timestamp++),
-                        new MessageModel("124", null, "Broadcast4", "6", null, timestamp++),
-                        new MessageModel("125", null, "Broadcast5", "6", null, timestamp++),
-                        new MessageModel("126", null, "Broadcast6", "6", null, timestamp))
-                .subscribeOn(Schedulers.single())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(l -> {
-                    l.size();
-                }, throwable -> {
-                    throwable.printStackTrace();
-                });
-    }
+//    @SuppressLint("all")
+//    private void doTestHere() {
+//        db.getDatabase(getApplicationContext()).userDao()
+//                .insert(new UserModel("1", "Arya"),
+//                        new UserModel("3", "Sam"),
+//                        new UserModel("4", "Jack"),
+//                        new UserModel("5", "Sarah"),
+//                        new UserModel("6", "Jennifer"),
+//                        new UserModel("2", "Tom"))
+//                .subscribeOn(Schedulers.single())
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .subscribe(l -> l.size(), Throwable::printStackTrace);
+////        Date date = new Date(System.currentTimeMillis());
+////        Calendar.getInstance().get(Calendar.)
+////        LocalDateTime a = LocalDateTime.now();
+////        a.get
+//        long timestamp = System.currentTimeMillis() / 1000;
+//        db.getDatabase(getApplicationContext()).messageDao()
+//                .insert(new MessageModel("100", "2", "content1", "2", "1", timestamp++),
+//                        new MessageModel("102", "2", "content2", "2", "1", timestamp++),
+//                        new MessageModel("103", "2", "content3", "2", "1", timestamp++),
+//                        new MessageModel("104", "2", "content4", "1", "2", timestamp++),
+//                        new MessageModel("105", "3", "content5", "1", "3", timestamp++),
+//                        new MessageModel("106", "3", "content6", "3", "1", timestamp++),
+//                        new MessageModel("107", "3", "content7", "3", "1", timestamp++),
+//                        new MessageModel("108", "3", "content8", "1", "3", timestamp++),
+//                        new MessageModel("109", "3", "content9", "3", "1", timestamp++),
+//                        new MessageModel("110", "3", "content10", "3", "1", timestamp++),
+//                        new MessageModel("111", "3", "content11", "1", "3", timestamp++),
+//                        new MessageModel("112", "4", "content12", "4", "1", timestamp++),
+//                        new MessageModel("113", "4", "content13", "1", "4", timestamp++),
+//                        new MessageModel("114", "4", "content14", "4", "1", timestamp++),
+//                        new MessageModel("115", "5", "content15", "5", "1", timestamp++),
+//                        new MessageModel("116", "5", "content16", "5", "1", timestamp++),
+//                        new MessageModel("117", "5", "content17", "5", "1", timestamp++),
+//                        new MessageModel("118", "6", "content18", "6", "1", timestamp++),
+//                        new MessageModel("119", "6", "content19", "6", "1", timestamp++),
+//                        new MessageModel("120", "6", "content20", "6", "1", timestamp++),
+//                        new MessageModel("121", null, "Broadcast1", "6", null, timestamp++),
+//                        new MessageModel("122", null, "Broadcast2", "6", null, timestamp++),
+//                        new MessageModel("123", null, "Broadcast3", "6", null, timestamp++),
+//                        new MessageModel("124", null, "Broadcast4", "6", null, timestamp++),
+//                        new MessageModel("125", null, "Broadcast5", "6", null, timestamp++),
+//                        new MessageModel("126", null, "Broadcast6", "6", null, timestamp))
+//                .subscribeOn(Schedulers.single())
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .subscribe(l -> {
+//                    l.size();
+//                }, throwable -> {
+//                    throwable.printStackTrace();
+//                });
+//    }
 
     private void initVar() {
 //        home = new AHBottomNavigationItem(getString(R.string.home), R.drawable.ic_home_emp);
@@ -242,24 +237,10 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
         runnable.run();
     }
 
-    private void checkBluetooth() {
+    private void checkBluetoothAdapter() {
         if (bluetoothManager.getAdapter() == null) {
             Utility.makeToast(this, "Your Phone Doesn't Support Bluetooth. Delete This App");
             finishAndRemoveTask();
-        } else {
-//            Bridgefy.initialize(getApplicationContext(), new RegistrationListener() {
-//                @Override
-//                public void onRegistrationSuccessful(BridgefyClient bridgefyClient) {
-//                    super.onRegistrationSuccessful(bridgefyClient);
-//                }
-//
-//                @Override
-//                public void onRegistrationFailed(int errorCode, String message) {
-//                    super.onRegistrationFailed(errorCode, message);
-//                }
-//            });
-//            Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
-//            bindService(gattServiceIntent, bluetoothManager, Context.BIND_AUTO_CREATE);
         }
     }
 
@@ -309,6 +290,8 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
 //                bluetoothManager.startAdvertising();
 //                getSupportFragmentManager().popBackStack();
                 selectPage();
+                if (data.getCurrPage() == LiveDataModel.CAUTION)
+                    locationStatusCheck();
 //                changeBottomBar();
                 break;
             case LiveDataModel.CONVERSATION:

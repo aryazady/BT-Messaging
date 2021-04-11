@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -101,6 +102,7 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
                             BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(GattHandler.READ_CHARACTERISTIC_UUID));
                             gatt.readCharacteristic(characteristic);
                         } catch (Exception e) {
+                            e.printStackTrace();
                             onFailed(gatt, status);
                         }
                     } else if (isWriting) {
@@ -326,7 +328,10 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
 //            }
         }, RW_TIME_OUT);
         Log.d(TAG, "request to connect with device: " + device.getAddress());
-        currGatt = device.connectGatt(mContext, false, getCallback(), BluetoothDevice.TRANSPORT_LE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+            currGatt = device.connectGatt(mContext, false, getCallback(), BluetoothDevice.TRANSPORT_LE);
+        else
+            currGatt = device.connectGatt(mContext, false, getCallback());
         currGatt.connect();
     }
 
@@ -482,7 +487,7 @@ public class GATTClient /*extends BluetoothGattCallback*/ {
 //        }
 //    }
 
-    private void checkQueue() {
+    private synchronized void checkQueue() {
         Log.d(TAG, "Checking Queue. Write: " + writeQueue.size() + " Read: " + readQueue.size() + " Lost Msg: " + lostMessages.size());
         if (!isReading && !isWriting) {
             if (!readQueue.isEmpty() && nearbyPeople.size() <= 4) {
