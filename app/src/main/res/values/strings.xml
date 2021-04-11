@@ -18,4 +18,5 @@
     <string name="enable_gps">Your GPS seems to be disabled, do you want to enable it?</string>
     <string name="choose_name">Enter your name</string>
     <string name="submit">submit</string>
+    <string name="launch_splash">launch splash</string>
 </resources>
