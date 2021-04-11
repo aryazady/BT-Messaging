@@ -27,6 +27,7 @@ import com.bm.messenger.model.LiveDataModel;
 import com.bm.messenger.model.UserModel;
 import com.bm.messenger.ui.fragment.interfaces.NearbyFindListener;
 import com.bm.messenger.utility.SharedViewModel;
+import com.bm.messenger.utility.Utility;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -83,6 +84,7 @@ public class HistoryPageFragment extends Fragment implements AdapterOnClickListe
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        Utility.hideKeyboard(getContext(), getView().getRootView().getWindowToken());
         getHistory();
         new Runnable() {
             @Override
@@ -133,7 +135,7 @@ public class HistoryPageFragment extends Fragment implements AdapterOnClickListe
         binding.pbLoadingChat.setVisibility(View.GONE);
         if (!historyChat.isEmpty()) {
             historyAdapter.notifyDataSetChanged();
-            if (binding.tvEmptyChat.getVisibility() == View.GONE) {
+            if (binding.tvEmptyChat.getVisibility() == View.VISIBLE) {
                 binding.tvEmptyChat.setVisibility(View.GONE);
                 binding.rvChatHistory.setVisibility(View.VISIBLE);
 //            binding.ivEmptyChat.setVisibility(View.GONE);

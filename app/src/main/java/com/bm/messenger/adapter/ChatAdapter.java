@@ -45,7 +45,7 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
         layoutParams.topMargin = dpToPixel(resources, 2);
         layoutParams.bottomMargin = dpToPixel(resources, 2);
         holder.getName().setVisibility(View.GONE);
-        holder.getBg().setPadding(dpToPixel(resources, 10), dpToPixel(resources, 8), dpToPixel(resources, 12), dpToPixel(resources, 10));
+        holder.getBg().setPadding(dpToPixel(resources, 8), dpToPixel(resources, 6), dpToPixel(resources, 10), dpToPixel(resources, 8));
         if (position == 0)
             layoutParams.bottomMargin = dpToPixel(resources, 6);
         else if (position == dataSet.size() - 1)
@@ -103,9 +103,7 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
             name = itemView.findViewById(R.id.tv_name_adapter);
             bg = itemView.findViewById(R.id.message_bg_adapter);
             layout = itemView.findViewById(R.id.message_layout_adapter);
-            itemView.setOnClickListener(v -> {
-                getAdapterPosition();
-            });
+            itemView.setOnClickListener(v -> getAdapterPosition());
         }
 
         public TextView getName() {

@@ -1,5 +1,10 @@
 package com.bm.messenger.ui.fragment.navigation;
 
+import android.content.Context;
+import android.hardware.input.InputManager;
+import android.os.IBinder;
+import android.view.inputmethod.InputMethodManager;
+
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;

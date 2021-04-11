@@ -79,7 +79,7 @@ public class LauncherActivity extends AppCompatActivity implements View.OnClickL
                         alpha -= 0.01f;
                         if (binding != null) {
                             binding.ivSplash.setAlpha(alpha);
-                            fadeoutHandler.postDelayed(this, 5);
+                            fadeoutHandler.postDelayed(this, 2);
                         }
                     } else {
                         binding.ivSplash.setVisibility(View.GONE);

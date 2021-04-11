@@ -18,6 +18,7 @@ import com.bm.messenger.R;
 import com.bm.messenger.databinding.FragmentNavBarBinding;
 import com.bm.messenger.model.LiveDataModel;
 import com.bm.messenger.utility.SharedViewModel;
+import com.bm.messenger.utility.Utility;
 
 public class NavBarFragment extends Fragment implements View.OnClickListener {
 
@@ -58,7 +59,7 @@ public class NavBarFragment extends Fragment implements View.OnClickListener {
 
     private void handleLiveData(LiveDataModel dataModel) {
         if (currPage != dataModel.getCurrPage())
-            changePage(dataModel.getCurrPage());
+            changeIcon(dataModel.getCurrPage());
     }
 
     private Drawable getInactiveIcon(int id) {
@@ -73,7 +74,7 @@ public class NavBarFragment extends Fragment implements View.OnClickListener {
         return icGroup;
     }
 
-    public void changePage(int page) {
+    public void changeIcon(int page) {
         if (page == LiveDataModel.HOME) {
             this.currPage = LiveDataModel.HOME;
             binding.navBarIcHome.setImageDrawable(getActiveIcon(R.drawable.ic_chats));
@@ -91,13 +92,13 @@ public class NavBarFragment extends Fragment implements View.OnClickListener {
         switch (v.getId()) {
             case R.id.nav_bar_ic_home:
                 if (currPage == LiveDataModel.BROADCAST) {
-                    changePage(LiveDataModel.HOME);
+                    changeIcon(LiveDataModel.HOME);
                     sharedViewModel.setData(new LiveDataModel(getString(R.string.home), LiveDataModel.BROADCAST, LiveDataModel.HOME));
                 }
                 break;
             case R.id.nav_bar_ic_group:
                 if (currPage == LiveDataModel.HOME) {
-                    changePage(LiveDataModel.BROADCAST);
+                    changeIcon(LiveDataModel.BROADCAST);
                     sharedViewModel.setData(new LiveDataModel(getString(R.string.broadcast), LiveDataModel.HOME, LiveDataModel.BROADCAST));
                 }
                 break;

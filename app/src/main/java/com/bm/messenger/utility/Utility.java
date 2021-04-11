@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.IBinder;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
 
 import androidx.core.content.ContextCompat;
@@ -66,5 +68,10 @@ public final class Utility {
 
     public static void makeToast(Context context, String message) {
         Toast.makeText(context, context.getResources().getString(R.string.error) + message, Toast.LENGTH_LONG).show();
+    }
+
+    public static void hideKeyboard(Context context, IBinder binder) {
+        InputMethodManager manager = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
+        manager.hideSoftInputFromWindow(binder, 0);
     }
 }

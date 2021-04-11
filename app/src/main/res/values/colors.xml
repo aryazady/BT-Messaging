@@ -6,6 +6,7 @@
     <color name="accent">#FF9800</color>
     <color name="primary_text">#F1F1F1</color>
     <color name="secondary_text">#212121</color>
+    <color name="tertiary_text">#6661EF</color>
     <color name="divider">#C8C8C8</color>
     <color name="inactive_chat">#BDBDBD</color>
     <color name="inactive_btn">#99656565</color>
